@@ -745,6 +745,7 @@ public abstract class RequestFiller
             }
 
             synchronized (dataQueue) {
+                disposeDataList(dataQueue);
                 dataQueue.clear();
                 addDataStop();
             }
