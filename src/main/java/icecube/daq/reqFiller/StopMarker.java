@@ -3,6 +3,7 @@ package icecube.daq.reqFiller;
 import icecube.daq.eventbuilder.IReadoutDataPayload;
 
 import icecube.daq.payload.IDOMID;
+import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
@@ -24,8 +25,8 @@ import java.util.zip.DataFormatException;
  * to indicate that a STOP has been received.
  */
 final class StopMarker
-    implements IHitDataPayload, IHitPayload, IPayload, IReadoutDataPayload,
-               IReadoutRequest, ITriggerRequestPayload
+    implements IHitDataPayload, IHitPayload, ILoadablePayload,
+               IReadoutDataPayload, IReadoutRequest, ITriggerRequestPayload
 {
     /** Faked payload type. */
     public static final int PAYLOAD_TYPE = 99;
@@ -272,5 +273,21 @@ final class StopMarker
     public boolean isLastPayloadOfGroup()
     {
         throw new Error("StopMarker");
+    }
+
+    /**
+     * Initializes Payload from backing so it can be used as an IPayload.
+     */
+    public void loadPayload()
+    {
+        // nothing to load
+    }
+
+    /**
+     * Object knows how to recycle itself
+     */
+    public void recycle()
+    {
+        // nothing to recycle
     }
 }

@@ -1,5 +1,6 @@
 package icecube.daq.reqFiller;
 
+import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
 import icecube.daq.payload.splicer.Payload;
@@ -292,7 +293,7 @@ public abstract class RequestFiller
      *
      * @param data payload
      */
-    public abstract void disposeData(IPayload data);
+    public abstract void disposeData(ILoadablePayload data);
 
     /**
      * Dispose of a list of data payloads which are no longer needed.
@@ -657,8 +658,8 @@ public abstract class RequestFiller
      *
      * @return The payload created for the current request.
      */
-    public abstract IPayload makeDataPayload(IPayload reqPayload,
-                                             List dataList);
+    public abstract ILoadablePayload makeDataPayload(IPayload reqPayload,
+                                                     List dataList);
 
     /**
      * Recycle payloads left after the final output payload.
@@ -710,7 +711,7 @@ public abstract class RequestFiller
      *
      * @return <tt>false</tt> if payload could not be sent
      */
-    public abstract boolean sendOutput(IPayload payload);
+    public abstract boolean sendOutput(ILoadablePayload payload);
 
     /**
      * Set request start/end times.
@@ -793,7 +794,8 @@ public abstract class RequestFiller
 
                 boolean sawStop = false;
                 for (int i = 0; i < numLeft; i++) {
-                    IPayload data = (IPayload) requestQueue.get(i);
+                    ILoadablePayload data =
+                        (ILoadablePayload) requestQueue.get(i);
                     if (data == STOP_MARKER) {
                         if (sawStop && LOG.isErrorEnabled()) {
                             LOG.error("Saw multiple request stops in " +
@@ -809,7 +811,7 @@ public abstract class RequestFiller
                         }
                     } else {
                         numDroppedRequests++;
-                        ((Payload) data).recycle();
+                        data.recycle();
                     }
                 }
 
@@ -828,11 +830,12 @@ public abstract class RequestFiller
          * @return payload or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
          */
-        IPayload getData()
+        ILoadablePayload getData()
         {
             timer.start();
 
-            IPayload data = (IPayload) syncRemove(dataQueue, true);
+            ILoadablePayload data =
+                (ILoadablePayload) syncRemove(dataQueue, true);
 
             timer.stop(BackEndTimer.GOT_DATA);
 
@@ -870,9 +873,10 @@ public abstract class RequestFiller
                 timerId = BackEndTimer.TOSS_DATA;
             } else {
                 try {
-                    ((Payload) data).loadPayload();
+                    data.loadPayload();
                 } catch (Exception ex) {
-                    LOG.error("Couldn't load " + data.getClass().getName(), ex);
+                    LOG.error("Couldn't load " + data.getClass().getName(),
+                              ex);
                     data = null;
                     numBadData++;
                     totBadData++;
@@ -908,11 +912,12 @@ public abstract class RequestFiller
          * @return request or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
          */
-        IPayload getRequest()
+        ILoadablePayload getRequest()
         {
             timer.start();
 
-            IPayload req = (IPayload) syncRemove(requestQueue, false);
+            ILoadablePayload req =
+                (ILoadablePayload) syncRemove(requestQueue, false);
 
             timer.stop(BackEndTimer.GOT_RQST);
 
@@ -942,8 +947,7 @@ public abstract class RequestFiller
                 timerId = BackEndTimer.EMPTY_LOOP;
             } else {
                 try {
-                    // TODO: There should be an interface for loadable payloads
-                    ((Payload) req).loadPayload();
+                    req.loadPayload();
                 } catch (Exception ex) {
                     LOG.error("Couldn't load request payload for " +
                               threadName, ex);
@@ -973,8 +977,8 @@ public abstract class RequestFiller
          */
         public void run()
         {
-            IPayload curData = null;
-            IPayload curReq = null;
+            ILoadablePayload curData = null;
+            ILoadablePayload curReq = null;
 
             // check the I/O rate every second
             final long rateInterval = 1000;
@@ -1053,7 +1057,7 @@ public abstract class RequestFiller
 
                         numDroppedRequests++;
 
-                        ((Payload) curReq).recycle();
+                        curReq.recycle();
                         curReq = null;
 
                         state = STATE_TOSSED_REQUEST;
@@ -1113,7 +1117,7 @@ public abstract class RequestFiller
                                 numDataUsed += requestedData.size();
 
                                 // build the output payload
-                                IPayload payload =
+                                ILoadablePayload payload =
                                     makeDataPayload(curReq, requestedData);
 
                                 if (payload == null) {
@@ -1151,7 +1155,7 @@ public abstract class RequestFiller
                             }
 
                             // clean up request memory
-                            ((Payload) curReq).recycle();
+                            curReq.recycle();
                             curReq = null;
 
                             // clean up data memory
