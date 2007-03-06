@@ -3,10 +3,13 @@ package icecube.daq.reqFiller.test;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.PayloadDestination;
-import icecube.daq.payload.splicer.Payload;
+
 import icecube.daq.reqFiller.RequestFiller;
 
+import icecube.daq.payload.splicer.Payload;
+
 import java.nio.ByteBuffer;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,7 +36,6 @@ class TestFiller
      *         <tt>0</tt> if data is within request
      *         <tt>1</tt> if data is after request
      */
-    @Override
     public int compareRequestAndData(IPayload reqPayload,
                                      IPayload dataPayload)
     {
@@ -56,7 +58,6 @@ class TestFiller
      *
      * @param list list of data payload
      */
-    @Override
     public void disposeDataList(List dataList)
     {
         // do nothing
@@ -65,7 +66,6 @@ class TestFiller
     /**
      * Perform any necessary clean-up after fulfillment thread exits.
      */
-    @Override
     public void finishThreadCleanup()
     {
         // do nothing
@@ -80,7 +80,6 @@ class TestFiller
      * @return <tt>true</tt> if the data payload is part of the
      *         current request
      */
-    @Override
     public boolean isRequested(IPayload reqPayload, IPayload dataPayload)
     {
         return true;
@@ -126,13 +125,11 @@ class TestFiller
      *
      * @param payload current request
      */
-    @Override
     public void setRequestTimes(IPayload payload)
     {
         // do nothing
     }
 
-    @Override
     public String toString()
     {
         return "XXX";
@@ -156,7 +153,17 @@ class TestData
         throw new Error("Unimplemented");
     }
 
+    public int getPayloadLength()
+    {
+        throw new Error("Unimplemented");
+    }
+
     public int getPayloadType()
+    {
+        throw new Error("Unimplemented");
+    }
+
+    public int getPayloadInterfaceType()
     {
         throw new Error("Unimplemented");
     }
@@ -424,10 +431,10 @@ public class RequestFillerTest
 
         assertEquals("Bad avg output data payloads",
                      0, tf.getAverageOutputDataPayloads());
-        assertEquals("Bad internal state",
-                     "Unknown state", tf.getInternalState());
-        assertEquals("Bad internal timing",
-                     "NOT RUNNING", tf.getInternalTiming());
+        assertEquals("Bad back-end state",
+                     "Unknown state", tf.getBackEndState());
+        assertEquals("Bad back-end timing",
+                     "NOT RUNNING", tf.getBackEndTiming());
         assertEquals("Bad data payloads/second",
                      0.0, tf.getDataPayloadsPerSecond(), 0.000001);
         assertEquals("Bad number of data payloads",

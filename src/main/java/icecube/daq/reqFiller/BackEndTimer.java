@@ -1,7 +1,5 @@
 package icecube.daq.reqFiller;
 
-import icecube.daq.util.CodeTimer;
-
 /**
  * Rudimentary profiler for payload request fulfillment engine.
  */
@@ -97,7 +95,6 @@ public class BackEndTimer
      *
      * @return timing info
      */
-    @Override
     public String getStats()
     {
         if (TIME_NAMES.length != NUM_TIMES) {
@@ -113,7 +110,6 @@ public class BackEndTimer
      *
      * @return timing info
      */
-    @Override
     public String toString()
     {
         return getStats();
