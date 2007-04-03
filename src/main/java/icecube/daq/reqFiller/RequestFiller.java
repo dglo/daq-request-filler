@@ -1125,8 +1125,8 @@ public abstract class RequestFiller
                                     numOutputsIgnored % 1000 == 0)
                                 {
                                     LOG.error("Ignoring empty output payload" +
-                                              " #" + numOutputsIgnored" in " +
-                                              threadName);
+                                              " #" + numOutputsIgnored +
+                                              " in " + threadName);
                                 }
 
                                 state = STATE_OUTPUT_IGNORED;
