@@ -1121,9 +1121,12 @@ public abstract class RequestFiller
                                 numOutputsIgnored++;
                                 totOutputsIgnored++;
 
-                                if (LOG.isErrorEnabled()) {
-                                    LOG.error("Ignoring empty output " +
-                                              "payload in " + threadName);
+                                if (LOG.isErrorEnabled() &&
+                                    numOutputsIgnored % 1000 == 0)
+                                {
+                                    LOG.error("Ignoring empty output payload" +
+                                              " #" + numOutputsIgnored" in " +
+                                              threadName);
                                 }
 
                                 state = STATE_OUTPUT_IGNORED;
