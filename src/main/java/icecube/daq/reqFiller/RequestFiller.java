@@ -95,6 +95,9 @@ public abstract class RequestFiller
         "Ignored empty output",
     };
 
+    /** Set to <tt>true</tt> to calculate I/O rates. */
+    private static final boolean MONITOR_RATES = false;
+
     /** Back-end thread name. */
     private String threadName;
     /** <tt>true</tt> if empty output payloads should be sent. */
@@ -861,6 +864,10 @@ public abstract class RequestFiller
             } else if (data == null) {
                 numNullData++;
 
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Saw null data payload in " + threadName);
+                }
+
                 state = STATE_ERR_NULL_DATA;
                 timerId = BackEndTimer.NULL_DATA;
             } else if (reqStopped) {
@@ -875,8 +882,11 @@ public abstract class RequestFiller
                 try {
                     data.loadPayload();
                 } catch (Exception ex) {
-                    LOG.error("Couldn't load " + data.getClass().getName(),
-                              ex);
+                    if (LOG.isErrorEnabled()) {
+                        LOG.error("Couldn't load " + data.getClass().getName(),
+                                  ex);
+                    }
+
                     data = null;
                     numBadData++;
                     totBadData++;
@@ -949,8 +959,11 @@ public abstract class RequestFiller
                 try {
                     req.loadPayload();
                 } catch (Exception ex) {
-                    LOG.error("Couldn't load request payload for " +
-                              threadName, ex);
+                    if (LOG.isErrorEnabled()) {
+                        LOG.error("Couldn't load request payload for " +
+                                  threadName, ex);
+                    }
+
                     req = null;
                 }
 
@@ -993,7 +1006,7 @@ public abstract class RequestFiller
                 timer.start();
 
                 // monitor data I/O rates
-                if (prevRcvd + rate < numDataReceived) {
+                if (MONITOR_RATES && prevRcvd + rate < numDataReceived) {
                     final long curRcvd = numDataReceived;
                     final long curReqs = numRequestsReceived;
                     final long curSent = numOutputsSent;
@@ -1107,6 +1120,14 @@ public abstract class RequestFiller
                                 // ignore empty payloads
                                 numOutputsIgnored++;
                                 totOutputsIgnored++;
+
+                                if (LOG.isErrorEnabled() &&
+                                    numOutputsIgnored % 1000 == 0)
+                                {
+                                    LOG.error("Ignoring empty output payload" +
+                                              " #" + numOutputsIgnored +
+                                              " in " + threadName);
+                                }
 
                                 state = STATE_OUTPUT_IGNORED;
                                 timerId = BackEndTimer.IGNORE_OUT;
