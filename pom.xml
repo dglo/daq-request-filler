@@ -13,11 +13,18 @@
   <artifactId>daq-request-filler</artifactId>
   <packaging>jar</packaging>
   <name>daq-request-filler</name>
+  <description>The ${project.name} sub-system (only used in simulation) of the Surface Data Acquisition system for the IceCube Project.</description>
 
   <scm>
-    <connection>scm:svn:http://code.icecube.wisc.edu/daq/meta-projects/daq-request-filler/trunk</connection>
+    <connection>scm:svn:http://code.icecube.wisc.edu/daq/projects/${project.name}/trunk</connection>
+    <developerConnection>scm:svn:http://code.icecube.wisc.edu/daq/projects/${project.name}/trunk</developerConnection>
+    <tag>HEAD</tag>
+    <url>http://code.icecube.wisc.edu/daq/projects/${project.name}</url>
   </scm>
 
+  <!-- Dependencies for this project.  These should not contain
+  versions.  The versions needed should be specified in the top-level
+  pom's dependencyManagement -->
   <dependencies>
     <dependency>
       <groupId>edu.wisc.icecube</groupId>
