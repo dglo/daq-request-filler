@@ -7,6 +7,7 @@ import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
+import icecube.daq.payload.PayloadDestination;
 
 import icecube.daq.trigger.IHitDataPayload;
 import icecube.daq.trigger.IHitDataRecord;
@@ -15,6 +16,8 @@ import icecube.daq.trigger.IReadoutRequest;
 import icecube.daq.trigger.ITriggerRequestPayload;
 
 import java.io.IOException;
+
+import java.nio.ByteBuffer;
 
 import java.util.Vector;
 
@@ -47,6 +50,16 @@ final class StopMarker
      * @return Error
      */
     public Object deepCopy()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
+    public void dispose()
     {
         throw new Error("StopMarker");
     }
@@ -289,5 +302,23 @@ final class StopMarker
     public void recycle()
     {
         // nothing to recycle
+    }
+
+    /**
+     * Object knows how to recycle itself
+     */
+    public int writePayload(boolean writeLoaded, PayloadDestination pDest)
+        throws IOException
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Object knows how to recycle itself
+     */
+    public int writePayload(boolean writeLoaded, int destOffset, ByteBuffer buf)
+        throws IOException
+    {
+        throw new Error("StopMarker");
     }
 }
