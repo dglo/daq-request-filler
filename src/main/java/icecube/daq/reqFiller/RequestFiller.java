@@ -6,6 +6,7 @@ import icecube.daq.payload.IPayload;
 import icecube.daq.payload.splicer.Payload;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -106,7 +107,7 @@ public abstract class RequestFiller
     /** Request queue -- ACCESS MUST BE SYNCHRONIZED. */
     private List requestQueue = new ArrayList();
     /** Data queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private List dataQueue = new ArrayList();
+    private List dataQueue = new LinkedList();
 
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
