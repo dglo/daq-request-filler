@@ -4,7 +4,6 @@ import icecube.daq.eventbuilder.IReadoutDataPayload;
 
 import icecube.daq.payload.IDOMID;
 import icecube.daq.payload.ILoadablePayload;
-import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.PayloadDestination;

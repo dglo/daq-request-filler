@@ -3,8 +3,6 @@ package icecube.daq.reqFiller;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
-import icecube.daq.payload.splicer.Payload;
-
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -182,7 +180,6 @@ public abstract class RequestFiller
             }
 
             final int newLen = newData.size() - offset;
-            final int oldLen = dataQueue.size();
 
             for (int i = 0; i < newLen; i++) {
                 dataQueue.add(newData.get(i + offset));
