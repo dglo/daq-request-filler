@@ -1,13 +1,11 @@
 package icecube.daq.reqFiller;
 
 import icecube.daq.eventbuilder.IReadoutDataPayload;
-
 import icecube.daq.payload.IDOMID;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.PayloadDestination;
-
 import icecube.daq.trigger.IHitDataPayload;
 import icecube.daq.trigger.IHitDataRecord;
 import icecube.daq.trigger.IHitPayload;
@@ -15,11 +13,8 @@ import icecube.daq.trigger.IReadoutRequest;
 import icecube.daq.trigger.ITriggerRequestPayload;
 
 import java.io.IOException;
-
 import java.nio.ByteBuffer;
-
 import java.util.Vector;
-
 import java.util.zip.DataFormatException;
 
 /**
