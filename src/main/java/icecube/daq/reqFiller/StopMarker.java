@@ -3,9 +3,9 @@ package icecube.daq.reqFiller;
 import icecube.daq.eventbuilder.IReadoutDataPayload;
 import icecube.daq.payload.IDOMID;
 import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IPayloadDestination;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
-import icecube.daq.payload.PayloadDestination;
 import icecube.daq.trigger.IHitDataPayload;
 import icecube.daq.trigger.IHitDataRecord;
 import icecube.daq.trigger.IHitPayload;
@@ -311,7 +311,7 @@ final class StopMarker
     /**
      * Object knows how to recycle itself
      */
-    public int writePayload(boolean writeLoaded, PayloadDestination pDest)
+    public int writePayload(boolean writeLoaded, IPayloadDestination pDest)
         throws IOException
     {
         throw new Error("StopMarker");
