@@ -1244,5 +1244,10 @@ public abstract class RequestFiller
 
             return obj;
         }
+
+        public String toString()
+        {
+            return threadName;
+        }
     }
 }
