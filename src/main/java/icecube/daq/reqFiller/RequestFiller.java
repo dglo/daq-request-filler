@@ -2,13 +2,21 @@ package icecube.daq.reqFiller;
 
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
+import icecube.daq.payload.splicer.Payload;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import com.sun.org.apache.xml.internal.utils.UnImplNode;
+import com.sun.tools.example.debug.bdi.MethodNotFoundException;
 
 /**
  * Generic request fulfillment engine.
@@ -103,9 +111,10 @@ public abstract class RequestFiller
     private boolean sendEmptyPayloads;
 
     /** Request queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private List requestQueue = new ArrayList();
+    private final BlockingQueue<IPayload> requestQueue;
+    
     /** Data queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private List dataQueue = new LinkedList();
+    private final BlockingQueue<IPayload> dataQueue;
 
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
@@ -156,42 +165,16 @@ public abstract class RequestFiller
     {
         this.threadName = threadName;
         this.sendEmptyPayloads = sendEmptyPayloads;
+        dataQueue       = new ArrayBlockingQueue<IPayload>(100000);
+        requestQueue    = new ArrayBlockingQueue<IPayload>(100000);
     }
 
-    /**
-     * Add data to data queue.
-     *
-     * @param newData list of new data
-     * @param offset number of previously-seen data at front of list
-     */
-    public void addData(List newData, int offset)
+    public void addData(List dataList, int offset)
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding list of data while thread " + threadName +
-                      " is stopped");
-        }
-
-        synchronized (dataQueue) {
-            // adjust offset to fit within legal bounds
-            if (offset < 0) {
-                offset = 0;
-            } else if (offset > newData.size()) {
-                offset = newData.size();
-            }
-
-            final int newLen = newData.size() - offset;
-
-            for (int i = 0; i < newLen; i++) {
-                dataQueue.add(newData.get(i + offset));
-            }
-
-            numDataReceived += newLen;
-            totDataReceived += newLen;
-
-            dataQueue.notify();
-        }
+        // probably should do more than just WARN here
+        LOG.error("Method not implemented.");
     }
-
+    
     /**
      * Add data to data queue.
      *
@@ -199,18 +182,25 @@ public abstract class RequestFiller
      */
     public void addData(IPayload newData)
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding data while thread " + threadName +
-                      " is stopped");
+        if (!isRunning()) 
+        {
+            if (LOG.isErrorEnabled()) 
+                LOG.error("Adding data while thread " + 
+                        threadName + " is stopped");
         }
-
-        synchronized (dataQueue) {
-            dataQueue.add(newData);
-
-            numDataReceived++;
-            totDataReceived++;
-
-            dataQueue.notify();
+        else
+        {
+            try
+            {
+                dataQueue.put(newData);
+                numDataReceived++;
+                totDataReceived++;
+            }
+            catch (InterruptedException e)
+            {
+                LOG.warn("Thread interrupted while attempting to place " + 
+                        newData + " : exception: " + e);
+            }
         }
     }
 
@@ -219,18 +209,21 @@ public abstract class RequestFiller
      */
     public void addDataStop()
     {
-        if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
+        if (isRunning())
+        {
+            try
+            {
+                dataQueue.put(STOP_MARKER);
+            }
+            catch (InterruptedException e)
+            {
+                LOG.warn("Thread interrupted while attempting to STOP data: " + e);
+            }
+        }
+        else if (LOG.isErrorEnabled()) 
+        {
                 LOG.error("Adding data stop while thread " + threadName +
                           " is stopped");
-            }
-
-            return;
-        }
-
-        synchronized (dataQueue) {
-            dataQueue.add(STOP_MARKER);
-            dataQueue.notify();
         }
     }
 
@@ -241,18 +234,23 @@ public abstract class RequestFiller
      */
     public void addRequest(IPayload newReq)
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
+        if (isRunning())
+        {
+            try
+            {
+                requestQueue.put(newReq);
+                numRequestsReceived++;
+                totRequestsReceived++;
+            }
+            catch (InterruptedException e)
+            {
+                LOG.error("Thread interrupted while adding request " + newReq + " ex = " + e);
+            }
+        }
+        else  
+        {
             LOG.error("Adding request while thread " + threadName +
                       " is stopped");
-        }
-
-        synchronized (requestQueue) {
-            requestQueue.add(newReq);
-
-            numRequestsReceived++;
-            totRequestsReceived++;
-
-            requestQueue.notify();
         }
     }
 
@@ -261,18 +259,21 @@ public abstract class RequestFiller
      */
     public void addRequestStop()
     {
-        if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Adding request stop while thread " + threadName +
-                          " is stopped");
+        if (isRunning()) 
+        {
+            try
+            {
+                requestQueue.put(STOP_MARKER);
             }
-
-            return;
+            catch (InterruptedException e)
+            {
+                LOG.error("Thread interrupted while attempting to STOP requests: " + e);
+            }
         }
-
-        synchronized (requestQueue) {
-            requestQueue.add(STOP_MARKER);
-            requestQueue.notify();
+        else
+        {
+            LOG.error("Adding request stop while thread " + threadName +
+                      " is stopped");
         }
     }
 
@@ -301,7 +302,10 @@ public abstract class RequestFiller
      *
      * @param dataList list of data payload
      */
-    public abstract void disposeDataList(List dataList);
+    public void disposeDataList(Collection<IPayload> dataList)
+    {
+        LOG.error("Method not implemented");
+    }
 
     /**
      * Perform any necessary clean-up after fulfillment thread exits.
@@ -646,7 +650,7 @@ public abstract class RequestFiller
      *
      * @return <tt>true</tt> if thread is running
      */
-    public boolean isRunning()
+    public synchronized boolean isRunning()
     {
         return (thread != null);
     }
@@ -741,16 +745,11 @@ public abstract class RequestFiller
     public void stopThread()
     {
         if (isRunning()) {
-            synchronized (requestQueue) {
-                requestQueue.clear();
-                addRequestStop();
-            }
-
-            synchronized (dataQueue) {
-                disposeDataList(dataQueue);
-                dataQueue.clear();
-                addDataStop();
-            }
+            requestQueue.clear();
+            addRequestStop();
+            disposeDataList(dataQueue);
+            dataQueue.clear();
+            addDataStop();
         }
     }
 
@@ -785,18 +784,20 @@ public abstract class RequestFiller
          */
         private void clearCache()
         {
-            synchronized (requestQueue) {
-                final int numLeft = requestQueue.size();
+            final int numLeft = requestQueue.size();
 
-                if (numLeft > 0 && LOG.isErrorEnabled()) {
-                    LOG.error("clearCache() called for " + numLeft +
-                              " requests in " + threadName);
-                }
+            if (numLeft > 0 && LOG.isErrorEnabled()) {
+                LOG.error("clearCache() called for " + numLeft +
+                          " requests in " + threadName);
+            }
 
-                boolean sawStop = false;
-                for (int i = 0; i < numLeft; i++) {
-                    ILoadablePayload data =
-                        (ILoadablePayload) requestQueue.get(i);
+            boolean sawStop = false;
+            try
+            {
+                while (!requestQueue.isEmpty())
+                {
+                    // TODO This is sloppy - I am sorry
+                    ILoadablePayload data = (ILoadablePayload) requestQueue.take();
                     if (data == STOP_MARKER) {
                         if (sawStop && LOG.isErrorEnabled()) {
                             LOG.error("Saw multiple request stops in " +
@@ -807,8 +808,7 @@ public abstract class RequestFiller
                         totRequestStops++;
                     } else if (data == null) {
                         if (LOG.isErrorEnabled()) {
-                            LOG.error("Dropping null request#" + (i + 1) +
-                                      " in " + threadName);
+                            LOG.error("Dropping null request in " + threadName);
                         }
                     } else {
                         numDroppedRequests++;
@@ -820,8 +820,12 @@ public abstract class RequestFiller
                     LOG.error("Didn't see stop message while" +
                               " clearing request cache for " + threadName);
                 }
-
                 requestQueue.clear();
+
+            }
+            catch (InterruptedException e)
+            {
+                LOG.error("Thread interrupted " + e);
             }
         }
 
@@ -831,12 +835,13 @@ public abstract class RequestFiller
          * @return payload or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
          */
-        ILoadablePayload getData()
+        ILoadablePayload getData() throws InterruptedException
         {
             timer.start();
 
-            ILoadablePayload data =
-                (ILoadablePayload) syncRemove(dataQueue, true);
+            state = STATE_WAITING;
+            ILoadablePayload data = (ILoadablePayload) dataQueue.take();
+            state = STATE_GOT_DATA;
 
             timer.stop(BackEndTimer.GOT_DATA);
 
@@ -920,13 +925,14 @@ public abstract class RequestFiller
          * @return request or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
          */
-        ILoadablePayload getRequest()
+        ILoadablePayload getRequest() throws InterruptedException
         {
             timer.start();
 
-            ILoadablePayload req =
-                (ILoadablePayload) syncRemove(requestQueue, false);
-
+            state = STATE_WAITING;
+            ILoadablePayload req = (ILoadablePayload) requestQueue.take();
+            state = STATE_GOT_REQUEST;
+            
             timer.stop(BackEndTimer.GOT_RQST);
 
             timer.start();
@@ -1035,21 +1041,29 @@ public abstract class RequestFiller
                     timer.start();
                 }
 
-                // get next request
-                if (curReq == null && !reqStopped) {
-                    curReq = getRequest();
-
-                    if (reqStopped && curData != null) {
-                        disposeData(curData);
-                        curData = null;
+                try
+                {
+                    // get next request
+                    if (curReq == null && !reqStopped) {
+                        curReq = getRequest();
+    
+                        if (reqStopped && curData != null) {
+                            disposeData(curData);
+                            curData = null;
+                        }
+                    }
+    
+                    // get next data payload
+                    if (curData == null && dataQueue.size() > 0) {
+                        curData = getData();
                     }
                 }
-
-                // get next data payload
-                if (curData == null && dataQueue.size() > 0) {
-                    curData = getData();
+                catch (InterruptedException e)
+                {
+                    LOG.warn("Request filler back-end thread interrupted.");
+                    return;
                 }
-
+                
                 // if we're out of requests but still have data
                 if (curReq == null && reqStopped && curData != null) {
                     disposeData(curData);
