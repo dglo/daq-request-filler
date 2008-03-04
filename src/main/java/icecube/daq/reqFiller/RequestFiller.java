@@ -3,9 +3,8 @@ package icecube.daq.reqFiller;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
-import icecube.daq.payload.splicer.Payload;
-
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -106,7 +105,7 @@ public abstract class RequestFiller
     /** Request queue -- ACCESS MUST BE SYNCHRONIZED. */
     private List requestQueue = new ArrayList();
     /** Data queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private List dataQueue = new ArrayList();
+    private List dataQueue = new LinkedList();
 
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
@@ -181,7 +180,6 @@ public abstract class RequestFiller
             }
 
             final int newLen = newData.size() - offset;
-            final int oldLen = dataQueue.size();
 
             for (int i = 0; i < newLen; i++) {
                 dataQueue.add(newData.get(i + offset));
@@ -1245,6 +1243,11 @@ public abstract class RequestFiller
             state = (isData ? STATE_GOT_DATA : STATE_GOT_REQUEST);
 
             return obj;
+        }
+
+        public String toString()
+        {
+            return threadName;
         }
     }
 }

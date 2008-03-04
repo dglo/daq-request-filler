@@ -3,13 +3,10 @@ package icecube.daq.reqFiller.test;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.PayloadDestination;
-
+import icecube.daq.payload.splicer.Payload;
 import icecube.daq.reqFiller.RequestFiller;
 
-import icecube.daq.payload.splicer.Payload;
-
 import java.nio.ByteBuffer;
-
 import java.util.ArrayList;
 import java.util.List;
 
