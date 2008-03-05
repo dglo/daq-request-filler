@@ -106,10 +106,10 @@ public abstract class RequestFiller
     private boolean sendEmptyPayloads;
 
     /** Request queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private final BlockingQueue<IPayload> requestQueue;
+    private final BlockingQueue<ILoadablePayload> requestQueue;
     
     /** Data queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private final BlockingQueue<IPayload> dataQueue;
+    private final BlockingQueue<ILoadablePayload> dataQueue;
 
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
@@ -160,14 +160,14 @@ public abstract class RequestFiller
     {
         this.threadName = threadName;
         this.sendEmptyPayloads = sendEmptyPayloads;
-        dataQueue       = new ArrayBlockingQueue<IPayload>(100000);
-        requestQueue    = new ArrayBlockingQueue<IPayload>(100000);
+        dataQueue       = new ArrayBlockingQueue<ILoadablePayload>(100000);
+        requestQueue    = new ArrayBlockingQueue<ILoadablePayload>(100000);
     }
 
-    public void addData(List dataList, int offset)
+    public void addData(List<ILoadablePayload> dataList, int offset)
     {
-        // probably should do more than just WARN here
-        LOG.error("Method not implemented.");
+        List<ILoadablePayload> subList = dataList.subList(offset, dataList.size()-1); 
+        for (ILoadablePayload datum : subList) addData(datum);
     }
     
     /**
@@ -175,7 +175,7 @@ public abstract class RequestFiller
      *
      * @param newData new data payload
      */
-    public void addData(IPayload newData)
+    public void addData(ILoadablePayload newData)
     {
         if (!isRunning()) 
         {
@@ -227,7 +227,7 @@ public abstract class RequestFiller
      *
      * @param newReq new request payload
      */
-    public void addRequest(IPayload newReq)
+    public void addRequest(ILoadablePayload newReq)
     {
         if (isRunning())
         {
@@ -297,9 +297,9 @@ public abstract class RequestFiller
      *
      * @param dataList list of data payload
      */
-    public void disposeDataList(Collection<IPayload> dataList)
+    public void disposeDataList(Collection<ILoadablePayload> dataList)
     {
-        LOG.error("Method not implemented");
+        for (ILoadablePayload datum : dataList) disposeData(datum); 
     }
 
     /**
@@ -791,8 +791,7 @@ public abstract class RequestFiller
             {
                 while (!requestQueue.isEmpty())
                 {
-                    // TODO This is sloppy - I am sorry
-                    ILoadablePayload data = (ILoadablePayload) requestQueue.take();
+                    ILoadablePayload data = requestQueue.take();
                     if (data == STOP_MARKER) {
                         if (sawStop && LOG.isErrorEnabled()) {
                             LOG.error("Saw multiple request stops in " +
@@ -1000,6 +999,8 @@ public abstract class RequestFiller
             long prevRcvd = 0;
             long prevReqs = 0;
             long prevSent = 0;
+            
+            LOG.debug("Beginning back-end processing thread.");
 
             while (!reqStopped || !dataStopped || curData != null) {
                 timer.start();
@@ -1204,54 +1205,6 @@ public abstract class RequestFiller
             finishThreadCleanup();
 
             thread = null;
-        }
-
-        /**
-         * Remove the first object from the list in a thread-safe manner.
-         *
-         * @param list list of objects
-         * @param isData <tt>true</tt> if we're removing a data payload,
-         *               otherwise it must be a request payload
-         *
-         * @return removed object
-         */
-        private Object syncRemove(List list, boolean isData)
-        {
-            if (list == null) {
-                return null;
-            }
-
-            Object obj;
-
-            synchronized (list) {
-                if (list.size() == 0) {
-                    state = STATE_WAITING;
-
-                    try {
-                        list.wait(100);
-                    } catch (InterruptedException ie) {
-                        String objName;
-                        if (isData) {
-                            objName = "data";
-                        } else {
-                            objName = "request";
-                        }
-
-                        LOG.error("Couldn't wait for " + objName + " in " +
-                                  threadName, ie);
-                    }
-                }
-
-                if (list.size() == 0) {
-                    obj = null;
-                } else {
-                    obj = list.remove(0);
-                }
-            }
-
-            state = (isData ? STATE_GOT_DATA : STATE_GOT_REQUEST);
-
-            return obj;
         }
 
         public String toString()
