@@ -1049,10 +1049,8 @@ public abstract class RequestFiller
                         }
                     }
     
-                    // get next data payload
-                    if (curData == null && dataQueue.size() > 0) {
-                        curData = getData();
-                    }
+                    // get next data payload - blocking if nothing is available
+                    if (curData == null) curData = getData();
                 }
                 catch (InterruptedException e)
                 {
