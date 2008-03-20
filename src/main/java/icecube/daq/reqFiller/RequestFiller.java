@@ -103,7 +103,7 @@ public abstract class RequestFiller
     private boolean sendEmptyPayloads;
 
     /** Request queue -- ACCESS MUST BE SYNCHRONIZED. */
-    private List requestQueue = new ArrayList();
+    private List requestQueue = new LinkedList();
     /** Data queue -- ACCESS MUST BE SYNCHRONIZED. */
     private List dataQueue = new LinkedList();
 
