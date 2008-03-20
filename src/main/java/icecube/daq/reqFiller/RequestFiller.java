@@ -346,7 +346,7 @@ public abstract class RequestFiller
      */
     public String getBackEndTiming()
     {
-        return (thread == null ? "NOT RUNNING" : thread.getTimerString());
+        return (thread == null ? "NOT RUNNING" : "NOT AVAILABLE");
     }
 
     /**
@@ -765,9 +765,6 @@ public abstract class RequestFiller
         /** <tt>true</tt> if there are no more data payloads. */
         private boolean dataStopped;
 
-        /** half-assed profiling data */
-        private BackEndTimer timer = new BackEndTimer();
-
         /**
          * Create and start back-end thread.
          *
@@ -833,16 +830,9 @@ public abstract class RequestFiller
          */
         ILoadablePayload getData()
         {
-            timer.start();
-
             ILoadablePayload data =
                 (ILoadablePayload) syncRemove(dataQueue, true);
 
-            timer.stop(BackEndTimer.GOT_DATA);
-
-            timer.start();
-
-            int timerId;
             if (data == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found Stop data in " + threadName);
@@ -858,7 +848,6 @@ public abstract class RequestFiller
                 data = null;
 
                 state = STATE_STOP_DATA;
-                timerId = BackEndTimer.STOP_DATA;
             } else if (data == null) {
                 numNullData++;
 
@@ -867,7 +856,6 @@ public abstract class RequestFiller
                 }
 
                 state = STATE_ERR_NULL_DATA;
-                timerId = BackEndTimer.NULL_DATA;
             } else if (reqStopped) {
                 disposeData(data);
 
@@ -875,7 +863,6 @@ public abstract class RequestFiller
                 data = null;
 
                 state = STATE_TOSSED_DATA;
-                timerId = BackEndTimer.TOSS_DATA;
             } else {
                 try {
                     data.loadPayload();
@@ -892,26 +879,12 @@ public abstract class RequestFiller
 
                 if (data == null) {
                     state = STATE_ERR_BAD_DATA;
-                    timerId = BackEndTimer.BAD_DATA;
                 } else {
                     state = STATE_LOADED_DATA;
-                    timerId = BackEndTimer.LOAD_DATA;
                 }
             }
 
-            timer.stop(timerId);
-
             return data;
-        }
-
-        /**
-         * Get string description of half-assed profiling data.
-         *
-         * @return profiling data
-         */
-        String getTimerString()
-        {
-            return timer.toString();
         }
 
         /**
@@ -922,16 +895,9 @@ public abstract class RequestFiller
          */
         ILoadablePayload getRequest()
         {
-            timer.start();
-
             ILoadablePayload req =
                 (ILoadablePayload) syncRemove(requestQueue, false);
 
-            timer.stop(BackEndTimer.GOT_RQST);
-
-            timer.start();
-
-            int timerId;
             if (req == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found Stop request in " + threadName);
@@ -947,12 +913,10 @@ public abstract class RequestFiller
                 req = null;
 
                 state = STATE_STOP_REQUEST;
-                timerId = BackEndTimer.STOP_RQST;
             } else if (req == null) {
                 numEmptyLoops++;
 
                 state = STATE_EMPTY_LOOP;
-                timerId = BackEndTimer.EMPTY_LOOP;
             } else {
                 try {
                     req.loadPayload();
@@ -969,16 +933,12 @@ public abstract class RequestFiller
                     numBadRequests++;
 
                     state = STATE_ERR_BAD_REQUEST;
-                    timerId = BackEndTimer.BAD_RQST;
                 } else {
                     setRequestTimes(req);
 
                     state = STATE_LOADED_REQUEST;
-                    timerId = BackEndTimer.LOAD_RQST;
                 }
             }
-
-            timer.stop(timerId);
 
             return req;
         }
@@ -1001,8 +961,6 @@ public abstract class RequestFiller
             long prevSent = 0;
 
             while (!reqStopped || !dataStopped || curData != null) {
-                timer.start();
-
                 // monitor data I/O rates
                 if (MONITOR_RATES && prevRcvd + rate < numDataReceived) {
                     final long curRcvd = numDataReceived;
@@ -1030,9 +988,6 @@ public abstract class RequestFiller
                         prevReqs = curReqs;
                         prevSent = curSent;
                     }
-
-                    timer.stop(BackEndTimer.RATE_MON);
-                    timer.start();
                 }
 
                 // get next request
@@ -1058,9 +1013,6 @@ public abstract class RequestFiller
 
                 // try to fit the data with the request
                 if (curReq != null && (dataStopped || curData != null)) {
-                    timer.start();
-
-                    int timerId;
                     if (dataStopped && curData == null &&
                         requestedData.size() == 0)
                     {
@@ -1072,7 +1024,6 @@ public abstract class RequestFiller
                         curReq = null;
 
                         state = STATE_TOSSED_REQUEST;
-                        timerId = BackEndTimer.TOSS_RQST;
                     } else {
                         final int cmp;
                         if (curData == null) {
@@ -1091,7 +1042,6 @@ public abstract class RequestFiller
                             totDataDiscarded++;
 
                             state = STATE_EARLY_DATA;
-                            timerId = BackEndTimer.EARLY_DATA;
                         } else if (cmp == 0) {
                             // data is within the current request
 
@@ -1102,12 +1052,10 @@ public abstract class RequestFiller
                                 totDataDiscarded++;
 
                                 state = STATE_TOSSED_DATA;
-                                timerId = BackEndTimer.TOSS_DATA;
                             } else {
                                 requestedData.add(curData);
 
                                 state = STATE_SAVED_DATA;
-                                timerId = BackEndTimer.SAVED_DATA;
                             }
 
                             curData = null;
@@ -1128,7 +1076,6 @@ public abstract class RequestFiller
                                 }
 
                                 state = STATE_OUTPUT_IGNORED;
-                                timerId = BackEndTimer.IGNORE_OUT;
                             } else {
                                 // data is past current request, build output!
 
@@ -1150,25 +1097,19 @@ public abstract class RequestFiller
                                     numNullOutputs++;
 
                                     state = STATE_ERR_NULL_OUTPUT;
-                                    timerId = BackEndTimer.NULL_OUT;
                                 } else {
                                     // send the output payload
 
-                                    timer.stop(BackEndTimer.MADE_OUT);
-
-                                    timer.start();
                                     if (sendOutput(payload)) {
                                         numOutputsSent++;
                                         totOutputsSent++;
 
                                         state = STATE_OUTPUT_SENT;
-                                        timerId = BackEndTimer.SENT_OUT;
                                     } else {
                                         numOutputsFailed++;
                                         totOutputsFailed++;
 
                                         state = STATE_OUTPUT_FAILED;
-                                        timerId = BackEndTimer.FAIL_OUT;
                                     }
                                 }
                             }
@@ -1182,8 +1123,6 @@ public abstract class RequestFiller
                                 disposeDataList(requestedData);
                                 requestedData.clear();
                             }
-
-                            timer.stop(timerId);
                         }
                     }
                 }
