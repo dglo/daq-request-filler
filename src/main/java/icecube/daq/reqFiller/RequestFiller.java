@@ -171,16 +171,16 @@ public abstract class RequestFiller
                       " is stopped");
         }
 
+        // adjust offset to fit within legal bounds
+        if (offset < 0) {
+            offset = 0;
+        } else if (offset > newData.size()) {
+            offset = newData.size();
+        }
+
+        final int newLen = newData.size() - offset;
+
         synchronized (dataQueue) {
-            // adjust offset to fit within legal bounds
-            if (offset < 0) {
-                offset = 0;
-            } else if (offset > newData.size()) {
-                offset = newData.size();
-            }
-
-            final int newLen = newData.size() - offset;
-
             for (int i = 0; i < newLen; i++) {
                 dataQueue.add(newData.get(i + offset));
             }
