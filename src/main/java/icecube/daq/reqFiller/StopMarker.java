@@ -193,11 +193,10 @@ final class StopMarker
      *
      * @return Error
      *
-     * @throws IOException never
      * @throws DataFormatException never
      */
     public List getPayloads()
-        throws IOException, DataFormatException
+        throws DataFormatException
     {
         throw new Error("StopMarker");
     }
