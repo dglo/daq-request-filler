@@ -117,6 +117,7 @@ public abstract class RequestFiller
     private long numDataDiscarded;
     private long numDataReceived;
     private long numDataUsed;
+    private long numDroppedData;
     private long numDroppedRequests;
     private long numEmptyLoops;
     private long numNullData;
@@ -125,7 +126,6 @@ public abstract class RequestFiller
     private long numOutputsIgnored;
     private long numOutputsSent;
     private long numRequestsReceived;
-    private long numUnusedData;
     private long outputPerSecX100;
     private long reqsPerSecX100;
 
@@ -400,6 +400,16 @@ public abstract class RequestFiller
     }
 
     /**
+     * Get number of data payloads dropped while stopping.
+     *
+     * @return number of data payloads dropped
+     */
+    public long getNumDataPayloadsDropped()
+    {
+        return numDroppedData;
+    }
+
+    /**
      * Get number of data payloads queued for processing.
      *
      * @return number of data payloads queued
@@ -507,16 +517,6 @@ public abstract class RequestFiller
     public long getNumRequestsReceived()
     {
         return numRequestsReceived;
-    }
-
-    /**
-     * Get number of data payloads not used for an event.
-     *
-     * @return number of unused data payloads
-     */
-    public long getNumUnusedDataPayloads()
-    {
-        return numUnusedData;
     }
 
     /**
@@ -678,6 +678,7 @@ public abstract class RequestFiller
         numDataDiscarded = 0;
         numDataReceived = 0;
         numDataUsed = 0;
+        numDroppedData = 0;
         numDroppedRequests = 0;
         numEmptyLoops = 0;
         numNullData = 0;
@@ -685,7 +686,6 @@ public abstract class RequestFiller
         numOutputsFailed = 0;
         numOutputsSent = 0;
         numRequestsReceived = 0;
-        numUnusedData = 0;
         outputPerSecX100 = 0;
         reqsPerSecX100 = 0;
 
@@ -859,7 +859,7 @@ public abstract class RequestFiller
             } else if (reqStopped) {
                 disposeData(data);
 
-                numUnusedData++;
+                numDroppedData++;
                 data = null;
 
                 state = STATE_TOSSED_DATA;
