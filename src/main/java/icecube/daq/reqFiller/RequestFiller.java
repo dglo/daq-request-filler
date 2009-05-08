@@ -696,8 +696,10 @@ public abstract class RequestFiller
                 LOG.error("Data payloads queued at " + threadName + " reset");
             }
 
-            disposeDataList(dataQueue);
-            dataQueue.clear();
+            synchronized (dataQueue) {
+                disposeDataList(dataQueue);
+                dataQueue.clear();
+            }
         }
 
         if (!isRunning()) {
