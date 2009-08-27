@@ -14,7 +14,7 @@ import icecube.daq.trigger.ITriggerRequestPayload;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Vector;
+import java.util.List;
 import java.util.zip.DataFormatException;
 
 /**
@@ -73,7 +73,7 @@ final class StopMarker
      *
      * @return Error
      */
-    public Vector getDataPayloads()
+    public List getDataPayloads()
     {
         throw new Error("StopMarker");
     }
@@ -93,7 +93,7 @@ final class StopMarker
      *
      * @return Error
      */
-    public Vector getHitList()
+    public List getHitList()
     {
         throw new Error("StopMarker");
     }
@@ -193,11 +193,10 @@ final class StopMarker
      *
      * @return Error
      *
-     * @throws IOException never
      * @throws DataFormatException never
      */
-    public Vector getPayloads()
-        throws IOException, DataFormatException
+    public List getPayloads()
+        throws DataFormatException
     {
         throw new Error("StopMarker");
     }
@@ -227,7 +226,7 @@ final class StopMarker
      *
      * @return Error
      */
-    public Vector getReadoutRequestElements()
+    public List getReadoutRequestElements()
     {
         throw new Error("StopMarker");
     }
