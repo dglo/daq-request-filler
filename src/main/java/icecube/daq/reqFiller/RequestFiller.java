@@ -287,7 +287,7 @@ public abstract class RequestFiller
      *         <tt>1</tt> if data is after request
      */
     public abstract int compareRequestAndData(IPayload reqPayload,
-                                       IPayload dataPayload);
+                                              IPayload dataPayload);
 
     /**
      * Dispose of a data payload which is no longer needed.
@@ -1048,10 +1048,10 @@ public abstract class RequestFiller
                             // data is within the current request
 
                             if (!isRequested(curReq, curData)) {
-                                disposeData(curData);
-
                                 numDataDiscarded++;
                                 totDataDiscarded++;
+
+                                disposeData(curData);
 
                                 state = STATE_TOSSED_DATA;
                             } else {
