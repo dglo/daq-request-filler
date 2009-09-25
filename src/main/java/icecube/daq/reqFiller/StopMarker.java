@@ -163,6 +163,16 @@ final class StopMarker
      *
      * @return Error
      */
+    public int getNumHits()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
     public ByteBuffer getPayloadBacking()
     {
         throw new Error("StopMarker");
