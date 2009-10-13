@@ -2,6 +2,7 @@ package icecube.daq.reqFiller;
 
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
+import icecube.daq.payload.IUTCTime;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -110,8 +111,13 @@ public abstract class RequestFiller
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
 
+    /** Lock used to atomically update numOutputsSent and lastOutputTime */
+    private Object outputDataLock = new Object();
+
     // per-run monitoring counters
     private long dataPerSecX100;
+    private long firstOutputTime;
+    private long lastOutputTime;
     private long numBadData;
     private long numBadRequests;
     private long numDataDiscarded;
@@ -360,6 +366,26 @@ public abstract class RequestFiller
     }
 
     /**
+     * Get first output time.
+     *
+     * @return first output time
+     */
+    public long getFirstOutputTime()
+    {
+        return firstOutputTime;
+    }
+
+    /**
+     * Get last output time.
+     *
+     * @return last output time
+     */
+    public long getLastOutputTime()
+    {
+        return lastOutputTime;
+    }
+
+    /**
      * Number of data payloads which could not be loaded.
      *
      * @return number of bad data payloads
@@ -520,6 +546,20 @@ public abstract class RequestFiller
     }
 
     /**
+     * Return the number of output payloads and the last payload time as a list.
+     *
+     * @return output payload data
+     */
+    public long[] getOutputData()
+    {
+        long[] data;
+        synchronized (outputDataLock) {
+            data = new long[] { numOutputsSent, lastOutputTime };
+        }
+        return data;
+    }
+
+    /**
      * Get current rate of output payloads per second.
      *
      * @return outputs/second
@@ -673,6 +713,8 @@ public abstract class RequestFiller
     public void reset()
     {
         dataPerSecX100 = 0;
+        firstOutputTime = 0;
+        lastOutputTime = 0;
         numBadData = 0;
         numBadRequests = 0;
         numDataDiscarded = 0;
@@ -1103,8 +1145,17 @@ public abstract class RequestFiller
                                     // send the output payload
 
                                     if (sendOutput(payload)) {
-                                        numOutputsSent++;
-                                        totOutputsSent++;
+                                        synchronized (outputDataLock) {
+                                            final IUTCTime utc =
+                                                payload.getPayloadTimeUTC();
+                                            lastOutputTime = utc.longValue();
+                                            if (firstOutputTime == 0) {
+                                                firstOutputTime =
+                                                    lastOutputTime;
+                                            }
+                                            numOutputsSent++;
+                                            totOutputsSent++;
+                                        }
 
                                         state = STATE_OUTPUT_SENT;
                                     } else {
