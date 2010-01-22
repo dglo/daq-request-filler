@@ -149,7 +149,7 @@ public abstract class RequestFiller
     // current back-end state
     private int state = STATE_ERR_UNKNOWN;
 
-    private BackEndThread thread;
+    private BackEndThread backEndThread;
 
     /**
      * Create a request fulfillment engine.
@@ -352,7 +352,7 @@ public abstract class RequestFiller
      */
     public String getBackEndTiming()
     {
-        return (thread == null ? "NOT RUNNING" : "NOT AVAILABLE");
+        return (backEndThread == null ? "NOT RUNNING" : "NOT AVAILABLE");
     }
 
     /**
@@ -688,7 +688,7 @@ public abstract class RequestFiller
      */
     public boolean isRunning()
     {
-        return (thread != null);
+        return (backEndThread != null);
     }
 
     /**
@@ -775,7 +775,8 @@ public abstract class RequestFiller
                 LOG.error("Thread " + threadName + " already running!");
             }
         } else {
-            thread = new BackEndThread(threadName);
+            backEndThread = new BackEndThread(threadName);
+            backEndThread.start();
         }
     }
 
@@ -804,6 +805,8 @@ public abstract class RequestFiller
     class BackEndThread
         implements Runnable
     {
+        /** Actual thread object (needed for start() method) */
+        private Thread thread;
         /** <tt>true</tt> if there are no more requests. */
         private boolean reqStopped;
         /** <tt>true</tt> if there are no more data payloads. */
@@ -816,9 +819,8 @@ public abstract class RequestFiller
          */
         BackEndThread(String name)
         {
-            Thread tmpThread = new Thread(this);
-            tmpThread.setName(name);
-            tmpThread.start();
+            thread = new Thread(this);
+            thread.setName(name);
         }
 
         /**
@@ -1186,7 +1188,15 @@ public abstract class RequestFiller
             recycleFinalData();
             finishThreadCleanup();
 
-            thread = null;
+            backEndThread = null;
+        }
+
+        /**
+         * Start the thread.
+         */
+        void start()
+        {
+            thread.start();
         }
 
         /**
