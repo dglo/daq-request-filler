@@ -4,6 +4,7 @@ import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IUTCTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -146,6 +147,9 @@ public abstract class RequestFiller
     private long totRequestsReceived;
     private long totRequestStops;
 
+    // ceiling for number of failed outputs
+    private long maxOutputFailures = 10;
+
     // current back-end state
     private int state = STATE_ERR_UNKNOWN;
 
@@ -169,12 +173,15 @@ public abstract class RequestFiller
      *
      * @param newData list of new data
      * @param offset number of previously-seen data at front of list
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addData(List newData, int offset)
+        throws IOException
     {
         if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding list of data while thread " + threadName +
-                      " is stopped");
+            throw new IOException("Adding data while thread " + threadName +
+                                  " is stopped");
         }
 
         // adjust offset to fit within legal bounds
@@ -202,12 +209,15 @@ public abstract class RequestFiller
      * Add data to data queue.
      *
      * @param newData new data payload
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addData(IPayload newData)
+        throws IOException
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding data while thread " + threadName +
-                      " is stopped");
+        if (!isRunning()) {
+            throw new IOException("Adding data while thread " + threadName +
+                                  " is stopped");
         }
 
         synchronized (dataQueue) {
@@ -222,16 +232,15 @@ public abstract class RequestFiller
 
     /**
      * Add stop marker to data queue.
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addDataStop()
+        throws IOException
     {
         if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Adding data stop while thread " + threadName +
-                          " is stopped");
-            }
-
-            return;
+            throw new IOException("Adding data stop while thread " +
+                                  threadName + " is stopped");
         }
 
         synchronized (dataQueue) {
@@ -244,12 +253,15 @@ public abstract class RequestFiller
      * Add request to request queue.
      *
      * @param newReq new request payload
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addRequest(IPayload newReq)
+        throws IOException
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding request while thread " + threadName +
-                      " is stopped");
+        if (!isRunning()) {
+            throw new IOException("Adding request while thread " + threadName +
+                                  " is stopped");
         }
 
         synchronized (requestQueue) {
@@ -264,16 +276,15 @@ public abstract class RequestFiller
 
     /**
      * Add stop marker to request queue.
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addRequestStop()
+        throws IOException
     {
         if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Adding request stop while thread " + threadName +
-                          " is stopped");
-            }
-
-            return;
+            throw new IOException("Adding request stop while thread " +
+                                  threadName + " is stopped");
         }
 
         synchronized (requestQueue) {
@@ -759,6 +770,17 @@ public abstract class RequestFiller
     public abstract boolean sendOutput(ILoadablePayload payload);
 
     /**
+     * Set the maximum number of failed outputs permitted before the thread
+     * is stopped.
+     *
+     * @param max maximum number of output failures allowed
+     */
+    public void setMaximumOutputFailures(long max)
+    {
+        maxOutputFailures = max;
+    }
+
+    /**
      * Set request start/end times.
      *
      * @param payload current request
@@ -784,6 +806,7 @@ public abstract class RequestFiller
      * If the thread is running, stop it.
      */
     public void stopThread()
+        throws IOException
     {
         if (isRunning()) {
             synchronized (requestQueue) {
@@ -1177,6 +1200,17 @@ public abstract class RequestFiller
                             if (requestedData.size() > 0) {
                                 disposeDataList(requestedData);
                                 requestedData.clear();
+                            }
+
+                            // if there are too many failures, abort
+                            if (numOutputsFailed > maxOutputFailures) {
+                                if (curData != null) {
+                                    disposeData(curData);
+                                    curData = null;
+                                }
+
+                                reqStopped = true;
+                                dataStopped = true;
                             }
                         }
                     }
