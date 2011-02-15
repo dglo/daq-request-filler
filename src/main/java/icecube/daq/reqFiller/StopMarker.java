@@ -292,6 +292,16 @@ final class StopMarker
     }
 
     /**
+     * Get the trigger name for the trigger type.
+     *
+     * @return trigger name
+     */
+    public String getTriggerName()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
      * Should not be used; throws an Error.
      *
      * @return Error
