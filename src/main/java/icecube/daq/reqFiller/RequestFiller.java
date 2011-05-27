@@ -23,15 +23,15 @@ public abstract class RequestFiller
     /** Message logger. */
     private static final Log LOG = LogFactory.getLog(RequestFiller.class);
 
-    /** Unknown back-end state. */
+    /** Unknown state. */
     private static final int STATE_ERR_UNKNOWN = 0;
     /** Generator was called with null data. */
     private static final int STATE_ERR_NULL_DATA = 2;
     /** Could not create an output payload. */
     private static final int STATE_ERR_NULL_OUTPUT = 3;
-    /** Back-end could not load the request. */
+    /** Could not load the request. */
     private static final int STATE_ERR_BAD_REQUEST = 4;
-    /** Back-end could not load the data payload. */
+    /** Could not load the data payload. */
     private static final int STATE_ERR_BAD_DATA = 5;
 
     /** A stop marker was pulled from the request queue. */
@@ -41,29 +41,29 @@ public abstract class RequestFiller
 
     /** No request available on this pass through main loop. */
     private static final int STATE_EMPTY_LOOP = 8;
-    /** Back-end is waiting for a request or data. */
+    /** Waiting for a request or data. */
     private static final int STATE_WAITING = 9;
-    /** Back-end got a request from the queue. */
+    /** Got a request from the queue. */
     private static final int STATE_GOT_REQUEST = 10;
-    /** Back-end got data from the queue. */
+    /** Got data from the queue. */
     private static final int STATE_GOT_DATA = 11;
-    /** Back-end successfully loaded the request. */
+    /** Successfully loaded the request. */
     private static final int STATE_LOADED_REQUEST = 12;
-    /** Back-end successfully loaded the data payload. */
+    /** Successfully loaded the data payload. */
     private static final int STATE_LOADED_DATA = 13;
-    /** Back-end could not use the request, so it was thrown out. */
+    /** Could not use the request, so it was thrown out. */
     private static final int STATE_TOSSED_REQUEST = 14;
-    /** Back-end could not use the data, so it was thrown out. */
+    /** Could not use the data, so it was thrown out. */
     private static final int STATE_TOSSED_DATA = 15;
     /** Data was before current request. */
     private static final int STATE_EARLY_DATA = 16;
     /** Data will be sent. */
     private static final int STATE_SAVED_DATA = 17;
-    /** Back-end sent output payload. */
+    /** Sent output payload. */
     private static final int STATE_OUTPUT_SENT = 18;
-    /** Back-end failed to send output payload. */
+    /** Failed to send output payload. */
     private static final int STATE_OUTPUT_FAILED = 19;
-    /** Back-end ignored empty output payload. */
+    /** Ignored empty output payload. */
     private static final int STATE_OUTPUT_IGNORED = 20;
 
     /** Total number of states. */
@@ -99,7 +99,7 @@ public abstract class RequestFiller
     /** Set to <tt>true</tt> to calculate I/O rates. */
     private static final boolean MONITOR_RATES = false;
 
-    /** Back-end thread name. */
+    /** Thread name. */
     private String threadName;
     /** <tt>true</tt> if empty output payloads should be sent. */
     private boolean sendEmptyPayloads;
@@ -150,10 +150,10 @@ public abstract class RequestFiller
     // ceiling for number of failed outputs
     private long maxOutputFailures = 10;
 
-    // current back-end state
+    // current state
     private int state = STATE_ERR_UNKNOWN;
 
-    private BackEndThread backEndThread;
+    private WorkerThread workerThread;
 
     /**
      * Create a request fulfillment engine.
@@ -340,33 +340,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Get current back-end state.
-     *
-     * @return state string
-     */
-    public String getBackEndState()
-    {
-        if (STATE_NAMES.length != NUM_STATES) {
-            throw new Error("Expected " + NUM_STATES + " state names, not " +
-                            STATE_NAMES.length);
-        } else if (state < 0 || state >= NUM_STATES) {
-            throw new Error("Illegal state #" + state);
-        }
-
-        return STATE_NAMES[state];
-    }
-
-    /**
-     * Get back-end timing profile.
-     *
-     * @return back-end timing profile
-     */
-    public String getBackEndTiming()
-    {
-        return (backEndThread == null ? "NOT RUNNING" : "NOT AVAILABLE");
-    }
-
-    /**
      * Get current rate of data payloads per second.
      *
      * @return data payloads/second
@@ -384,6 +357,33 @@ public abstract class RequestFiller
     public long getFirstOutputTime()
     {
         return firstOutputTime;
+    }
+
+    /**
+     * Get current state.
+     *
+     * @return state string
+     */
+    public String getInternalState()
+    {
+        if (STATE_NAMES.length != NUM_STATES) {
+            throw new Error("Expected " + NUM_STATES + " state names, not " +
+                            STATE_NAMES.length);
+        } else if (state < 0 || state >= NUM_STATES) {
+            throw new Error("Illegal state #" + state);
+        }
+
+        return STATE_NAMES[state];
+    }
+
+    /**
+     * Get internal timing profile.
+     *
+     * @return internal timing profile
+     */
+    public String getInternalTiming()
+    {
+        return (workerThread == null ? "NOT RUNNING" : "NOT AVAILABLE");
     }
 
     /**
@@ -699,7 +699,7 @@ public abstract class RequestFiller
      */
     public boolean isRunning()
     {
-        return (backEndThread != null);
+        return (workerThread != null);
     }
 
     /**
@@ -719,7 +719,7 @@ public abstract class RequestFiller
     public abstract void recycleFinalData();
 
     /**
-     * Reset the back end after it has been stopped.
+     * Reset the request filler after it has been stopped.
      */
     public void reset()
     {
@@ -797,8 +797,8 @@ public abstract class RequestFiller
                 LOG.error("Thread " + threadName + " already running!");
             }
         } else {
-            backEndThread = new BackEndThread(threadName);
-            backEndThread.start();
+            workerThread = new WorkerThread(threadName);
+            workerThread.start();
         }
     }
 
@@ -825,7 +825,7 @@ public abstract class RequestFiller
     /**
      * Class which does all the hard work.
      */
-    class BackEndThread
+    class WorkerThread
         implements Runnable
     {
         /** Actual thread object (needed for start() method) */
@@ -836,11 +836,11 @@ public abstract class RequestFiller
         private boolean dataStopped;
 
         /**
-         * Create and start back-end thread.
+         * Create and start worker thread.
          *
          * @param name thread name
          */
-        BackEndThread(String name)
+        WorkerThread(String name)
         {
             thread = new Thread(this);
             thread.setName(name);
@@ -892,7 +892,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Get next payload from splicer->back-end queue.
+         * Get next payload from input queue.
          *
          * @return payload or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
@@ -957,7 +957,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Get next request from front-end->back-end queue.
+         * Get next request from request queue.
          *
          * @return request or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
@@ -1013,7 +1013,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Main back-end processing loop.
+         * Main processing loop.
          */
         public void run()
         {
@@ -1222,7 +1222,7 @@ public abstract class RequestFiller
             recycleFinalData();
             finishThreadCleanup();
 
-            backEndThread = null;
+            workerThread = null;
         }
 
         /**
