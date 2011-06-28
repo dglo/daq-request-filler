@@ -326,6 +326,16 @@ final class StopMarker
      *
      * @return Error
      */
+    public long getUTCTime()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
     public boolean isLastPayloadOfGroup()
     {
         throw new Error("StopMarker");
