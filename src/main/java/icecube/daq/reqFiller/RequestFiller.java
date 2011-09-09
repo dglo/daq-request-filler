@@ -565,7 +565,7 @@ public abstract class RequestFiller
     {
         long[] data;
         synchronized (outputDataLock) {
-            data = new long[] { numOutputsSent, lastOutputTime };
+            data = new long[] {numOutputsSent, lastOutputTime };
         }
         return data;
     }
