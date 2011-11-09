@@ -1169,14 +1169,12 @@ public abstract class RequestFiller
                                 } else {
                                     // send the output payload
 
+                                    final long payTime = payload.getUTCTime();
                                     if (sendOutput(payload)) {
                                         synchronized (outputDataLock) {
-                                            final IUTCTime utc =
-                                                payload.getPayloadTimeUTC();
-                                            lastOutputTime = utc.longValue();
+                                            lastOutputTime = payTime;
                                             if (firstOutputTime == 0) {
-                                                firstOutputTime =
-                                                    lastOutputTime;
+                                                firstOutputTime = payTime;
                                             }
                                             numOutputsSent++;
                                             totOutputsSent++;
