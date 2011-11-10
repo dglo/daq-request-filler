@@ -557,20 +557,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Return the number of output payloads and the last payload time as a list.
-     *
-     * @return output payload data
-     */
-    public long[] getOutputData()
-    {
-        long[] data;
-        synchronized (outputDataLock) {
-            data = new long[] {numOutputsSent, lastOutputTime };
-        }
-        return data;
-    }
-
-    /**
      * Get current rate of output payloads per second.
      *
      * @return outputs/second
