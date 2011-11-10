@@ -709,6 +709,28 @@ public abstract class RequestFiller
      */
     public void reset()
     {
+        resetCounters();
+
+        state = STATE_ERR_UNKNOWN;
+
+        if (dataQueue.size() > 0) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Data payloads queued at " + threadName + " reset");
+            }
+
+            synchronized (dataQueue) {
+                disposeDataList(dataQueue);
+                dataQueue.clear();
+            }
+        }
+
+        if (!isRunning()) {
+            startThread();
+        }
+    }
+
+    private void resetCounters()
+    {
         dataPerSecX100 = 0;
         firstOutputTime = 0;
         lastOutputTime = 0;
@@ -727,23 +749,25 @@ public abstract class RequestFiller
         numRequestsReceived = 0;
         outputPerSecX100 = 0;
         reqsPerSecX100 = 0;
+    }
 
-        state = STATE_ERR_UNKNOWN;
-
-        if (dataQueue.size() > 0) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Data payloads queued at " + threadName + " reset");
-            }
+    public long[] resetOutputData()
+    {
+        long[] data;
+        synchronized (outputDataLock) {
+            data = new long[] {
+                numOutputsSent, firstOutputTime, lastOutputTime
+            };
 
             synchronized (dataQueue) {
-                disposeDataList(dataQueue);
-                dataQueue.clear();
+                synchronized (requestQueue) {
+                    resetCounters();
+                    numDataReceived = dataQueue.size();
+                    numRequestsReceived = requestQueue.size();
+                }
             }
         }
-
-        if (!isRunning()) {
-            startThread();
-        }
+        return data;
     }
 
     /**
