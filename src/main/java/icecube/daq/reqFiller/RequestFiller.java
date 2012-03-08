@@ -17,6 +17,9 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class RequestFiller
 {
+    public static final ILoadablePayload DROPPED_PAYLOAD =
+        new DummyPayload();
+
     /** Stop marker for request and data queues. */
     private static final StopMarker STOP_MARKER = StopMarker.INSTANCE;
 
@@ -1176,7 +1179,7 @@ public abstract class RequestFiller
                                     numNullOutputs++;
 
                                     state = STATE_ERR_NULL_OUTPUT;
-                                } else {
+                                } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
 
                                     final long payTime = payload.getUTCTime();
