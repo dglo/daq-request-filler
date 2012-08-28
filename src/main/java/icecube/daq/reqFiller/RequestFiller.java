@@ -2,7 +2,6 @@ package icecube.daq.reqFiller;
 
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
-import icecube.daq.payload.IUTCTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
