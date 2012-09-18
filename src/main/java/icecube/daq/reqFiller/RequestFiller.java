@@ -5,6 +5,7 @@ import icecube.daq.payload.IPayload;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -154,6 +155,9 @@ public abstract class RequestFiller
 
     // current state
     private int state = STATE_ERR_UNKNOWN;
+
+    // time at start of year
+    private long jan1Millis = Long.MIN_VALUE;
 
     private WorkerThread workerThread;
 
@@ -396,6 +400,32 @@ public abstract class RequestFiller
     public long getLastOutputTime()
     {
         return lastOutputTime;
+    }
+
+    /**
+     * Compute the latency since the data from the last payload was created.
+     *
+     * @return latency in seconds
+     */
+    public double getLatency()
+    {
+        if (jan1Millis == Long.MIN_VALUE) {
+            GregorianCalendar cal = new GregorianCalendar();
+            final int year = cal.get(GregorianCalendar.YEAR);
+            cal.set(year, 0, 1, 0, 0, 0);
+            jan1Millis = cal.getTimeInMillis();
+        }
+
+        if (lastOutputTime <= 0) {
+            return 0.0;
+        }
+
+        final long usecsSinceJan1 = System.currentTimeMillis() - jan1Millis;
+        final long ticksSinceJan1 = usecsSinceJan1 * 10000000;
+        final long latencyInTicks = ticksSinceJan1 - lastOutputTime;
+        final double latencyInSeconds = latencyInTicks / 10000000000.0;
+
+        return latencyInSeconds;
     }
 
     /**
