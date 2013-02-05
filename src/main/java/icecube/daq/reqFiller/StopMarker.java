@@ -386,6 +386,27 @@ final class StopMarker
     }
 
     /**
+     * Set the source ID. Needed for backward compatiblility with the old
+     * global request handler implementation.
+     *
+     * @param srcId new source ID
+     */
+    public void setSourceID(ISourceID srcId)
+    {
+        throw new Error("Unimplemented");
+    }
+
+    /**
+     * Set the universal ID for global requests which will become events.
+     *
+     * @param uid new UID
+     */
+    public void setUID(int uid)
+    {
+        throw new Error("Unimplemented");
+    }
+
+    /**
      * Object knows how to recycle itself
      */
     public int writePayload(boolean writeLoaded, IPayloadDestination pDest)
