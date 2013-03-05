@@ -342,6 +342,16 @@ final class StopMarker
     }
 
     /**
+     * Stop markers are not merged trigger requests.
+     *
+     * @return false
+     */
+    public boolean isMerged()
+    {
+        return false;
+    }
+
+    /**
      * Should not be used; throws an Error.
      *
      * @return Error
