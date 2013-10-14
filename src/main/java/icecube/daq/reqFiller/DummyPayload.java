@@ -41,7 +41,7 @@ public class DummyPayload
      * returns the length in bytes of this payload
      */
     public int getPayloadLength() {
-        return 0;
+        return length();
     }
 
     /**
@@ -62,6 +62,11 @@ public class DummyPayload
      * gets the UTC time tag of a payload as a long value
      */
     public long getUTCTime()
+    {
+        return 0;
+    }
+
+    public int length()
     {
         return 0;
     }
