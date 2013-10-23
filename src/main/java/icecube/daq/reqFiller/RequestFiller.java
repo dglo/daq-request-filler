@@ -1212,7 +1212,7 @@ public abstract class RequestFiller
                                     // send the output payload
 
                                     final long payTime = payload.getUTCTime();
-                                    if (sendOutput(payload)) {
+                                    if (payTime >= 0 && sendOutput(payload)) {
                                         synchronized (outputDataLock) {
                                             lastOutputTime = payTime;
                                             if (firstOutputTime == 0) {
@@ -1224,6 +1224,16 @@ public abstract class RequestFiller
 
                                         state = STATE_OUTPUT_SENT;
                                     } else {
+                                        if (payTime < 0) {
+                                            if (LOG.isErrorEnabled()) {
+                                                final String msg =
+                                                    "Could not send payload" +
+                                                    " with negative time: " +
+                                                    payload;
+                                                LOG.error(msg);
+                                            }
+                                        }
+
                                         numOutputsFailed++;
                                         totOutputsFailed++;
 
