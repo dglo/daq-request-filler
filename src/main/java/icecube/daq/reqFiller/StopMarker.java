@@ -1,16 +1,17 @@
 package icecube.daq.reqFiller;
 
-import icecube.daq.eventbuilder.IReadoutDataPayload;
+import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IDOMID;
+import icecube.daq.payload.IHitDataPayload;
+import icecube.daq.payload.IHitDataRecord;
+import icecube.daq.payload.IHitPayload;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayloadDestination;
+import icecube.daq.payload.IReadoutDataPayload;
+import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.ISourceID;
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
-import icecube.daq.trigger.IHitDataPayload;
-import icecube.daq.trigger.IHitDataRecord;
-import icecube.daq.trigger.IHitPayload;
-import icecube.daq.trigger.IReadoutRequest;
-import icecube.daq.trigger.ITriggerRequestPayload;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,6 +37,15 @@ final class StopMarker
      */
     private StopMarker()
     {
+    }
+
+    /**
+     * Should not be used' throws an Error.
+     */
+    public void addElement(int type, int srcId, long firstTime, long lastTime,
+                           long domId)
+    {
+        throw new Error("StopMarker");
     }
 
     /**
@@ -74,6 +84,16 @@ final class StopMarker
      * @return Error
      */
     public List getDataPayloads()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
+    public int getEmbeddedLength()
     {
         throw new Error("StopMarker");
     }
@@ -134,6 +154,16 @@ final class StopMarker
      * @return Error
      */
     public IUTCTime getLastTimeUTC()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
+    public int getNumHits()
     {
         throw new Error("StopMarker");
     }
@@ -262,6 +292,16 @@ final class StopMarker
     }
 
     /**
+     * Get the trigger name for the trigger type.
+     *
+     * @return trigger name
+     */
+    public String getTriggerName()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
      * Should not be used; throws an Error.
      *
      * @return Error
@@ -286,7 +326,37 @@ final class StopMarker
      *
      * @return Error
      */
+    public long getUTCTime()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
     public boolean isLastPayloadOfGroup()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Stop markers are not merged trigger requests.
+     *
+     * @return false
+     */
+    public boolean isMerged()
+    {
+        return false;
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
+    public int length()
     {
         throw new Error("StopMarker");
     }
@@ -300,11 +370,50 @@ final class StopMarker
     }
 
     /**
+     * Should not be used; throws an Error.
+     *
+     * @return Error
+     */
+    public int putBody(ByteBuffer buf, int offset)
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
      * Object knows how to recycle itself
      */
     public void recycle()
     {
         // nothing to recycle
+    }
+
+    /**
+     * Should not be used; throws an Error.
+     */
+    public void setCache(IByteBufferCache cache)
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Set the source ID. Needed for backward compatiblility with the old
+     * global request handler implementation.
+     *
+     * @param srcId new source ID
+     */
+    public void setSourceID(ISourceID srcId)
+    {
+        throw new Error("Unimplemented");
+    }
+
+    /**
+     * Set the universal ID for global requests which will become events.
+     *
+     * @param uid new UID
+     */
+    public void setUID(int uid)
+    {
+        throw new Error("Unimplemented");
     }
 
     /**

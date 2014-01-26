@@ -3,7 +3,9 @@ package icecube.daq.reqFiller;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -15,21 +17,24 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class RequestFiller
 {
+    public static final ILoadablePayload DROPPED_PAYLOAD =
+        new DummyPayload();
+
     /** Stop marker for request and data queues. */
     private static final StopMarker STOP_MARKER = StopMarker.INSTANCE;
 
     /** Message logger. */
     private static final Log LOG = LogFactory.getLog(RequestFiller.class);
 
-    /** Unknown back-end state. */
+    /** Unknown state. */
     private static final int STATE_ERR_UNKNOWN = 0;
     /** Generator was called with null data. */
     private static final int STATE_ERR_NULL_DATA = 2;
     /** Could not create an output payload. */
     private static final int STATE_ERR_NULL_OUTPUT = 3;
-    /** Back-end could not load the request. */
+    /** Could not load the request. */
     private static final int STATE_ERR_BAD_REQUEST = 4;
-    /** Back-end could not load the data payload. */
+    /** Could not load the data payload. */
     private static final int STATE_ERR_BAD_DATA = 5;
 
     /** A stop marker was pulled from the request queue. */
@@ -39,29 +44,29 @@ public abstract class RequestFiller
 
     /** No request available on this pass through main loop. */
     private static final int STATE_EMPTY_LOOP = 8;
-    /** Back-end is waiting for a request or data. */
+    /** Waiting for a request or data. */
     private static final int STATE_WAITING = 9;
-    /** Back-end got a request from the queue. */
+    /** Got a request from the queue. */
     private static final int STATE_GOT_REQUEST = 10;
-    /** Back-end got data from the queue. */
+    /** Got data from the queue. */
     private static final int STATE_GOT_DATA = 11;
-    /** Back-end successfully loaded the request. */
+    /** Successfully loaded the request. */
     private static final int STATE_LOADED_REQUEST = 12;
-    /** Back-end successfully loaded the data payload. */
+    /** Successfully loaded the data payload. */
     private static final int STATE_LOADED_DATA = 13;
-    /** Back-end could not use the request, so it was thrown out. */
+    /** Could not use the request, so it was thrown out. */
     private static final int STATE_TOSSED_REQUEST = 14;
-    /** Back-end could not use the data, so it was thrown out. */
+    /** Could not use the data, so it was thrown out. */
     private static final int STATE_TOSSED_DATA = 15;
     /** Data was before current request. */
     private static final int STATE_EARLY_DATA = 16;
     /** Data will be sent. */
     private static final int STATE_SAVED_DATA = 17;
-    /** Back-end sent output payload. */
+    /** Sent output payload. */
     private static final int STATE_OUTPUT_SENT = 18;
-    /** Back-end failed to send output payload. */
+    /** Failed to send output payload. */
     private static final int STATE_OUTPUT_FAILED = 19;
-    /** Back-end ignored empty output payload. */
+    /** Ignored empty output payload. */
     private static final int STATE_OUTPUT_IGNORED = 20;
 
     /** Total number of states. */
@@ -97,7 +102,7 @@ public abstract class RequestFiller
     /** Set to <tt>true</tt> to calculate I/O rates. */
     private static final boolean MONITOR_RATES = false;
 
-    /** Back-end thread name. */
+    /** Thread name. */
     private String threadName;
     /** <tt>true</tt> if empty output payloads should be sent. */
     private boolean sendEmptyPayloads;
@@ -110,8 +115,13 @@ public abstract class RequestFiller
     /** accumulator for data to be sent in next output payload. */
     private List requestedData = new ArrayList();
 
+    /** Lock used to atomically update numOutputsSent and lastOutputTime */
+    private Object outputDataLock = new Object();
+
     // per-run monitoring counters
     private long dataPerSecX100;
+    private long firstOutputTime;
+    private long lastOutputTime;
     private long numBadData;
     private long numBadRequests;
     private long numDataDiscarded;
@@ -140,10 +150,16 @@ public abstract class RequestFiller
     private long totRequestsReceived;
     private long totRequestStops;
 
-    // current back-end state
+    // ceiling for number of failed outputs
+    private long maxOutputFailures = 10;
+
+    // current state
     private int state = STATE_ERR_UNKNOWN;
 
-    private BackEndThread thread;
+    // time at start of year
+    private long jan1Millis = Long.MIN_VALUE;
+
+    private WorkerThread workerThread;
 
     /**
      * Create a request fulfillment engine.
@@ -163,12 +179,15 @@ public abstract class RequestFiller
      *
      * @param newData list of new data
      * @param offset number of previously-seen data at front of list
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addData(List newData, int offset)
+        throws IOException
     {
         if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding list of data while thread " + threadName +
-                      " is stopped");
+            throw new IOException("Adding data while thread " + threadName +
+                                  " is stopped");
         }
 
         // adjust offset to fit within legal bounds
@@ -196,12 +215,15 @@ public abstract class RequestFiller
      * Add data to data queue.
      *
      * @param newData new data payload
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addData(IPayload newData)
+        throws IOException
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding data while thread " + threadName +
-                      " is stopped");
+        if (!isRunning()) {
+            throw new IOException("Adding data while thread " + threadName +
+                                  " is stopped");
         }
 
         synchronized (dataQueue) {
@@ -216,16 +238,15 @@ public abstract class RequestFiller
 
     /**
      * Add stop marker to data queue.
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addDataStop()
+        throws IOException
     {
         if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Adding data stop while thread " + threadName +
-                          " is stopped");
-            }
-
-            return;
+            throw new IOException("Adding data stop while thread " +
+                                  threadName + " is stopped");
         }
 
         synchronized (dataQueue) {
@@ -238,12 +259,15 @@ public abstract class RequestFiller
      * Add request to request queue.
      *
      * @param newReq new request payload
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addRequest(IPayload newReq)
+        throws IOException
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
-            LOG.error("Adding request while thread " + threadName +
-                      " is stopped");
+        if (!isRunning()) {
+            throw new IOException("Adding request while thread " + threadName +
+                                  " is stopped");
         }
 
         synchronized (requestQueue) {
@@ -258,16 +282,15 @@ public abstract class RequestFiller
 
     /**
      * Add stop marker to request queue.
+     *
+     * @throws IOException if the processing thread is stopped
      */
     public void addRequestStop()
+        throws IOException
     {
         if (!isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Adding request stop while thread " + threadName +
-                          " is stopped");
-            }
-
-            return;
+            throw new IOException("Adding request stop while thread " +
+                                  threadName + " is stopped");
         }
 
         synchronized (requestQueue) {
@@ -287,7 +310,7 @@ public abstract class RequestFiller
      *         <tt>1</tt> if data is after request
      */
     public abstract int compareRequestAndData(IPayload reqPayload,
-                                       IPayload dataPayload);
+                                              IPayload dataPayload);
 
     /**
      * Dispose of a data payload which is no longer needed.
@@ -323,11 +346,31 @@ public abstract class RequestFiller
     }
 
     /**
-     * Get current back-end state.
+     * Get current rate of data payloads per second.
+     *
+     * @return data payloads/second
+     */
+    public double getDataPayloadsPerSecond()
+    {
+        return (double) dataPerSecX100 / 100.0;
+    }
+
+    /**
+     * Get first output time.
+     *
+     * @return first output time
+     */
+    public long getFirstOutputTime()
+    {
+        return firstOutputTime;
+    }
+
+    /**
+     * Get current state.
      *
      * @return state string
      */
-    public String getBackEndState()
+    public String getInternalState()
     {
         if (STATE_NAMES.length != NUM_STATES) {
             throw new Error("Expected " + NUM_STATES + " state names, not " +
@@ -340,23 +383,49 @@ public abstract class RequestFiller
     }
 
     /**
-     * Get back-end timing profile.
+     * Get internal timing profile.
      *
-     * @return back-end timing profile
+     * @return internal timing profile
      */
-    public String getBackEndTiming()
+    public String getInternalTiming()
     {
-        return (thread == null ? "NOT RUNNING" : "NOT AVAILABLE");
+        return (workerThread == null ? "NOT RUNNING" : "NOT AVAILABLE");
     }
 
     /**
-     * Get current rate of data payloads per second.
+     * Get last output time.
      *
-     * @return data payloads/second
+     * @return last output time
      */
-    public double getDataPayloadsPerSecond()
+    public long getLastOutputTime()
     {
-        return (double) dataPerSecX100 / 100.0;
+        return lastOutputTime;
+    }
+
+    /**
+     * Compute the latency since the data from the last payload was created.
+     *
+     * @return latency in seconds
+     */
+    public double getLatency()
+    {
+        if (jan1Millis == Long.MIN_VALUE) {
+            GregorianCalendar cal = new GregorianCalendar();
+            final int year = cal.get(GregorianCalendar.YEAR);
+            cal.set(year, 0, 1, 0, 0, 0);
+            jan1Millis = cal.getTimeInMillis();
+        }
+
+        if (lastOutputTime <= 0) {
+            return 0.0;
+        }
+
+        final long usecsSinceJan1 = System.currentTimeMillis() - jan1Millis;
+        final long ticksSinceJan1 = usecsSinceJan1 * 10000000;
+        final long latencyInTicks = ticksSinceJan1 - lastOutputTime;
+        final double latencyInSeconds = latencyInTicks / 10000000000.0;
+
+        return latencyInSeconds;
     }
 
     /**
@@ -648,7 +717,7 @@ public abstract class RequestFiller
      */
     public boolean isRunning()
     {
-        return (thread != null);
+        return (workerThread != null);
     }
 
     /**
@@ -668,26 +737,11 @@ public abstract class RequestFiller
     public abstract void recycleFinalData();
 
     /**
-     * Reset the back end after it has been stopped.
+     * Reset the request filler after it has been stopped.
      */
     public void reset()
     {
-        dataPerSecX100 = 0;
-        numBadData = 0;
-        numBadRequests = 0;
-        numDataDiscarded = 0;
-        numDataReceived = 0;
-        numDataUsed = 0;
-        numDroppedData = 0;
-        numDroppedRequests = 0;
-        numEmptyLoops = 0;
-        numNullData = 0;
-        numNullOutputs = 0;
-        numOutputsFailed = 0;
-        numOutputsSent = 0;
-        numRequestsReceived = 0;
-        outputPerSecX100 = 0;
-        reqsPerSecX100 = 0;
+        resetCounters();
 
         state = STATE_ERR_UNKNOWN;
 
@@ -707,6 +761,47 @@ public abstract class RequestFiller
         }
     }
 
+    private void resetCounters()
+    {
+        dataPerSecX100 = 0;
+        firstOutputTime = 0;
+        lastOutputTime = 0;
+        numBadData = 0;
+        numBadRequests = 0;
+        numDataDiscarded = 0;
+        numDataReceived = 0;
+        numDataUsed = 0;
+        numDroppedData = 0;
+        numDroppedRequests = 0;
+        numEmptyLoops = 0;
+        numNullData = 0;
+        numNullOutputs = 0;
+        numOutputsFailed = 0;
+        numOutputsSent = 0;
+        numRequestsReceived = 0;
+        outputPerSecX100 = 0;
+        reqsPerSecX100 = 0;
+    }
+
+    public long[] resetOutputData()
+    {
+        long[] data;
+        synchronized (outputDataLock) {
+            data = new long[] {
+                numOutputsSent, firstOutputTime, lastOutputTime
+            };
+
+            synchronized (dataQueue) {
+                synchronized (requestQueue) {
+                    resetCounters();
+                    numDataReceived = dataQueue.size();
+                    numRequestsReceived = requestQueue.size();
+                }
+            }
+        }
+        return data;
+    }
+
     /**
      * Send the output payload.
      *
@@ -715,6 +810,17 @@ public abstract class RequestFiller
      * @return <tt>false</tt> if payload could not be sent
      */
     public abstract boolean sendOutput(ILoadablePayload payload);
+
+    /**
+     * Set the maximum number of failed outputs permitted before the thread
+     * is stopped.
+     *
+     * @param max maximum number of output failures allowed
+     */
+    public void setMaximumOutputFailures(long max)
+    {
+        maxOutputFailures = max;
+    }
 
     /**
      * Set request start/end times.
@@ -733,7 +839,8 @@ public abstract class RequestFiller
                 LOG.error("Thread " + threadName + " already running!");
             }
         } else {
-            thread = new BackEndThread(threadName);
+            workerThread = new WorkerThread(threadName);
+            workerThread.start();
         }
     }
 
@@ -741,6 +848,7 @@ public abstract class RequestFiller
      * If the thread is running, stop it.
      */
     public void stopThread()
+        throws IOException
     {
         if (isRunning()) {
             synchronized (requestQueue) {
@@ -759,24 +867,25 @@ public abstract class RequestFiller
     /**
      * Class which does all the hard work.
      */
-    class BackEndThread
+    class WorkerThread
         implements Runnable
     {
+        /** Actual thread object (needed for start() method) */
+        private Thread thread;
         /** <tt>true</tt> if there are no more requests. */
         private boolean reqStopped;
         /** <tt>true</tt> if there are no more data payloads. */
         private boolean dataStopped;
 
         /**
-         * Create and start back-end thread.
+         * Create and start worker thread.
          *
          * @param name thread name
          */
-        BackEndThread(String name)
+        WorkerThread(String name)
         {
-            Thread tmpThread = new Thread(this);
-            tmpThread.setName(name);
-            tmpThread.start();
+            thread = new Thread(this);
+            thread.setName(name);
         }
 
         /**
@@ -825,7 +934,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Get next payload from splicer->back-end queue.
+         * Get next payload from input queue.
          *
          * @return payload or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
@@ -890,7 +999,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Get next request from front-end->back-end queue.
+         * Get next request from request queue.
          *
          * @return request or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
@@ -946,7 +1055,7 @@ public abstract class RequestFiller
         }
 
         /**
-         * Main back-end processing loop.
+         * Main processing loop.
          */
         public void run()
         {
@@ -1048,10 +1157,10 @@ public abstract class RequestFiller
                             // data is within the current request
 
                             if (!isRequested(curReq, curData)) {
-                                disposeData(curData);
-
                                 numDataDiscarded++;
                                 totDataDiscarded++;
+
+                                disposeData(curData);
 
                                 state = STATE_TOSSED_DATA;
                             } else {
@@ -1099,15 +1208,32 @@ public abstract class RequestFiller
                                     numNullOutputs++;
 
                                     state = STATE_ERR_NULL_OUTPUT;
-                                } else {
+                                } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
 
-                                    if (sendOutput(payload)) {
-                                        numOutputsSent++;
-                                        totOutputsSent++;
+                                    final long payTime = payload.getUTCTime();
+                                    if (payTime >= 0 && sendOutput(payload)) {
+                                        synchronized (outputDataLock) {
+                                            lastOutputTime = payTime;
+                                            if (firstOutputTime == 0) {
+                                                firstOutputTime = payTime;
+                                            }
+                                            numOutputsSent++;
+                                            totOutputsSent++;
+                                        }
 
                                         state = STATE_OUTPUT_SENT;
                                     } else {
+                                        if (payTime < 0) {
+                                            if (LOG.isErrorEnabled()) {
+                                                final String msg =
+                                                    "Could not send payload" +
+                                                    " with negative time: " +
+                                                    payload;
+                                                LOG.error(msg);
+                                            }
+                                        }
+
                                         numOutputsFailed++;
                                         totOutputsFailed++;
 
@@ -1125,6 +1251,17 @@ public abstract class RequestFiller
                                 disposeDataList(requestedData);
                                 requestedData.clear();
                             }
+
+                            // if there are too many failures, abort
+                            if (numOutputsFailed > maxOutputFailures) {
+                                if (curData != null) {
+                                    disposeData(curData);
+                                    curData = null;
+                                }
+
+                                reqStopped = true;
+                                dataStopped = true;
+                            }
                         }
                     }
                 }
@@ -1135,7 +1272,15 @@ public abstract class RequestFiller
             recycleFinalData();
             finishThreadCleanup();
 
-            thread = null;
+            workerThread = null;
+        }
+
+        /**
+         * Start the thread.
+         */
+        void start()
+        {
+            thread.start();
         }
 
         /**

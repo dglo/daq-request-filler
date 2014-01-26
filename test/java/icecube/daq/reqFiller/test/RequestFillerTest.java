@@ -428,10 +428,10 @@ public class RequestFillerTest
 
         assertEquals("Bad avg output data payloads",
                      0, tf.getAverageOutputDataPayloads());
-        assertEquals("Bad back-end state",
-                     "Unknown state", tf.getBackEndState());
-        assertEquals("Bad back-end timing",
-                     "NOT RUNNING", tf.getBackEndTiming());
+        assertEquals("Bad internal state",
+                     "Unknown state", tf.getInternalState());
+        assertEquals("Bad internal timing",
+                     "NOT RUNNING", tf.getInternalTiming());
         assertEquals("Bad data payloads/second",
                      0.0, tf.getDataPayloadsPerSecond(), 0.000001);
         assertEquals("Bad number of data payloads",
