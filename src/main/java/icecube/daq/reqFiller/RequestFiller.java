@@ -1059,6 +1059,20 @@ public abstract class RequestFiller
          */
         public void run()
         {
+            try {
+                runInternal();
+            } catch (Throwable thr) {
+                LOG.error("Main loop failed", thr);
+            }
+        }
+
+        /**
+         * Real processing loop.
+         */
+        private void runInternal()
+        {
+            LOG.error("Starting main loop");
+
             ILoadablePayload curData = null;
             ILoadablePayload curReq = null;
 
@@ -1266,6 +1280,8 @@ public abstract class RequestFiller
                     }
                 }
             }
+            LOG.error("reqStopped " + reqStopped + " dataStopped " +
+                      dataStopped + " curData " + curData);
 
             // clean up before exiting
             clearCache();
@@ -1273,6 +1289,8 @@ public abstract class RequestFiller
             finishThreadCleanup();
 
             workerThread = null;
+
+            LOG.error("Exiting main loop");
         }
 
         /**
