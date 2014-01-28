@@ -1047,7 +1047,7 @@ public abstract class RequestFiller
             long prevReqs = 0;
             long prevSent = 0;
 
-            boolean dangerZone = true;
+            boolean dangerZone = sendEmptyPayloads;
             long numLoops = 0;
             long numChanges = 0;
             String lastOp = "";
