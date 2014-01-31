@@ -60,9 +60,6 @@ public abstract class RequestFiller
         String getDescription() { return description; }
     };
 
-    /** Set to <tt>true</tt> to calculate I/O rates. */
-    private static final boolean MONITOR_RATES = false;
-
     /** Thread name. */
     private String threadName;
     /** <tt>true</tt> if empty output payloads should be sent. */
@@ -1016,45 +1013,8 @@ public abstract class RequestFiller
             ILoadablePayload curData = null;
             ILoadablePayload curReq = null;
 
-            // check the I/O rate every second
-            final long rateInterval = 1000;
-
-            long prevTime = System.currentTimeMillis();
-            long rate = 0;
-            long prevRcvd = 0;
-            long prevReqs = 0;
-            long prevSent = 0;
-
             while (!reqStopped || !dataStopped || curData != null) {
                 // monitor data I/O rates
-                if (MONITOR_RATES && prevRcvd + rate < numDataReceived) {
-                    final long curRcvd = numDataReceived;
-                    final long curReqs = numRequestsReceived;
-                    final long curSent = numOutputsSent;
-                    final long curTime = System.currentTimeMillis();
-
-                    if (prevTime + rateInterval < curTime) {
-                        final long timeDiff = curTime - prevTime;
-
-                        dataPerSecX100 =
-                            ((curRcvd - prevRcvd) * rateInterval * 100) /
-                            timeDiff;
-                        reqsPerSecX100 =
-                            ((curReqs - prevReqs) * rateInterval * 100) /
-                            timeDiff;
-                        outputPerSecX100 =
-                            ((curSent - prevSent) * rateInterval * 100) /
-                            timeDiff;
-
-                        rate = dataPerSecX100 / 100;
-
-                        prevTime = curTime;
-                        prevRcvd = curRcvd;
-                        prevReqs = curReqs;
-                        prevSent = curSent;
-                    }
-                }
-
                 // get next request
                 if (curReq == null && !reqStopped) {
                     curReq = getRequest();
