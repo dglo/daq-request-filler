@@ -26,77 +26,38 @@ public abstract class RequestFiller
     /** Message logger. */
     private static final Log LOG = LogFactory.getLog(RequestFiller.class);
 
-    /** Unknown state. */
-    private static final int STATE_ERR_UNKNOWN = 0;
-    /** Generator was called with null data. */
-    private static final int STATE_ERR_NULL_DATA = 2;
-    /** Could not create an output payload. */
-    private static final int STATE_ERR_NULL_OUTPUT = 3;
-    /** Could not load the request. */
-    private static final int STATE_ERR_BAD_REQUEST = 4;
-    /** Could not load the data payload. */
-    private static final int STATE_ERR_BAD_DATA = 5;
+    enum State {
+        ERR_UNKNOWN("Unknown state"),
+        ERR_NULL_DATA("Null data payload"),
+        ERR_NULL_OUTPUT("Null hit"),
+        ERR_BAD_REQUEST("Null request"),
+        ERR_BAD_DATA("Null output"),
 
-    /** A stop marker was pulled from the request queue. */
-    private static final int STATE_STOP_REQUEST = 6;
-    /** A stop marker was pulled from the data queue. */
-    private static final int STATE_STOP_DATA = 7;
+        STOP_REQUEST("Global request STOP received"),
+        STOP_DATA("Splicer STOP received"),
 
-    /** No request available on this pass through main loop. */
-    private static final int STATE_EMPTY_LOOP = 8;
-    /** Waiting for a request or data. */
-    private static final int STATE_WAITING = 9;
-    /** Got a request from the queue. */
-    private static final int STATE_GOT_REQUEST = 10;
-    /** Got data from the queue. */
-    private static final int STATE_GOT_DATA = 11;
-    /** Successfully loaded the request. */
-    private static final int STATE_LOADED_REQUEST = 12;
-    /** Successfully loaded the data payload. */
-    private static final int STATE_LOADED_DATA = 13;
-    /** Could not use the request, so it was thrown out. */
-    private static final int STATE_TOSSED_REQUEST = 14;
-    /** Could not use the data, so it was thrown out. */
-    private static final int STATE_TOSSED_DATA = 15;
-    /** Data was before current request. */
-    private static final int STATE_EARLY_DATA = 16;
-    /** Data will be sent. */
-    private static final int STATE_SAVED_DATA = 17;
-    /** Sent output payload. */
-    private static final int STATE_OUTPUT_SENT = 18;
-    /** Failed to send output payload. */
-    private static final int STATE_OUTPUT_FAILED = 19;
-    /** Ignored empty output payload. */
-    private static final int STATE_OUTPUT_IGNORED = 20;
+        EMPTY_LOOP("Empty loop"),
+        WAIT_REQUEST("Waiting for request"),
+        WAIT_DATA("Waiting for data"),
+        GOT_REQUEST("Got request"),
+        GOT_DATA("Got data"),
+        LOADED_REQUEST("Loaded request"),
+        LOADED_DATA("Loaded data"),
+        TOSSED_REQUEST("Threw away unused request"),
+        TOSSED_DATA("Threw away unused data"),
+        EARLY_DATA("Got early data"),
+        SAVED_DATA("Data was saved"),
+        OUTPUT_SENT("Sent output"),
+        OUTPUT_FAILED("Could not send output"),
+        OUTPUT_IGNORED("Ignored empty output");
 
-    /** Total number of states. */
-    private static final int NUM_STATES = 21;
+        private String description;
 
-    /** Names corresponding to the described states. */
-    private static final String[] STATE_NAMES = new String[] {
-        "Unknown state",
-        "Null data payload",
-        "Null hit",
-        "Null request",
-        "Null output",
+        State(String description) {
+            this.description = description;
+        }
 
-        "Global request STOP received",
-        "Splicer STOP received",
-
-        "Waiting for input",
-        "Got request",
-        "Got data",
-        "Loaded request",
-        "Loaded data",
-        "Bad request",
-        "Bad data",
-        "Threw away unused request",
-        "Threw away unused data",
-        "Got early data",
-        "Data was saved",
-        "Sent output",
-        "Could not send output",
-        "Ignored empty output",
+        String getDescription() { return description; }
     };
 
     /** Set to <tt>true</tt> to calculate I/O rates. */
@@ -154,7 +115,7 @@ public abstract class RequestFiller
     private long maxOutputFailures = 10;
 
     // current state
-    private int state = STATE_ERR_UNKNOWN;
+    private State state = State.ERR_UNKNOWN;
 
     // time at start of year
     private long jan1Millis = Long.MIN_VALUE;
@@ -372,14 +333,7 @@ public abstract class RequestFiller
      */
     public String getInternalState()
     {
-        if (STATE_NAMES.length != NUM_STATES) {
-            throw new Error("Expected " + NUM_STATES + " state names, not " +
-                            STATE_NAMES.length);
-        } else if (state < 0 || state >= NUM_STATES) {
-            throw new Error("Illegal state #" + state);
-        }
-
-        return STATE_NAMES[state];
+        return state.getDescription();
     }
 
     /**
@@ -743,7 +697,7 @@ public abstract class RequestFiller
     {
         resetCounters();
 
-        state = STATE_ERR_UNKNOWN;
+        state = State.ERR_UNKNOWN;
 
         if (dataQueue.size() > 0) {
             if (LOG.isErrorEnabled()) {
@@ -958,7 +912,7 @@ public abstract class RequestFiller
 
                 data = null;
 
-                state = STATE_STOP_DATA;
+                state = State.STOP_DATA;
             } else if (data == null) {
                 numNullData++;
 
@@ -966,14 +920,14 @@ public abstract class RequestFiller
                     LOG.error("Saw null data payload in " + threadName);
                 }
 
-                state = STATE_ERR_NULL_DATA;
+                state = State.ERR_NULL_DATA;
             } else if (reqStopped) {
                 disposeData(data);
 
                 numDroppedData++;
                 data = null;
 
-                state = STATE_TOSSED_DATA;
+                state = State.TOSSED_DATA;
             } else {
                 try {
                     data.loadPayload();
@@ -989,9 +943,9 @@ public abstract class RequestFiller
                 }
 
                 if (data == null) {
-                    state = STATE_ERR_BAD_DATA;
+                    state = State.ERR_BAD_DATA;
                 } else {
-                    state = STATE_LOADED_DATA;
+                    state = State.LOADED_DATA;
                 }
             }
 
@@ -1023,11 +977,11 @@ public abstract class RequestFiller
 
                 req = null;
 
-                state = STATE_STOP_REQUEST;
+                state = State.STOP_REQUEST;
             } else if (req == null) {
                 numEmptyLoops++;
 
-                state = STATE_EMPTY_LOOP;
+                state = State.EMPTY_LOOP;
             } else {
                 try {
                     req.loadPayload();
@@ -1043,11 +997,11 @@ public abstract class RequestFiller
                 if (req == null) {
                     numBadRequests++;
 
-                    state = STATE_ERR_BAD_REQUEST;
+                    state = State.ERR_BAD_REQUEST;
                 } else {
                     setRequestTimes(req);
 
-                    state = STATE_LOADED_REQUEST;
+                    state = State.LOADED_REQUEST;
                 }
             }
 
@@ -1134,7 +1088,7 @@ public abstract class RequestFiller
                         curReq.recycle();
                         curReq = null;
 
-                        state = STATE_TOSSED_REQUEST;
+                        state = State.TOSSED_REQUEST;
                     } else {
                         final int cmp;
                         if (curData == null) {
@@ -1152,7 +1106,7 @@ public abstract class RequestFiller
                             numDataDiscarded++;
                             totDataDiscarded++;
 
-                            state = STATE_EARLY_DATA;
+                            state = State.EARLY_DATA;
                         } else if (cmp == 0) {
                             // data is within the current request
 
@@ -1162,11 +1116,11 @@ public abstract class RequestFiller
 
                                 disposeData(curData);
 
-                                state = STATE_TOSSED_DATA;
+                                state = State.TOSSED_DATA;
                             } else {
                                 requestedData.add(curData);
 
-                                state = STATE_SAVED_DATA;
+                                state = State.SAVED_DATA;
                             }
 
                             curData = null;
@@ -1186,7 +1140,7 @@ public abstract class RequestFiller
                                               " in " + threadName);
                                 }
 
-                                state = STATE_OUTPUT_IGNORED;
+                                state = State.OUTPUT_IGNORED;
                             } else {
                                 // data is past current request, build output!
 
@@ -1207,7 +1161,7 @@ public abstract class RequestFiller
 
                                     numNullOutputs++;
 
-                                    state = STATE_ERR_NULL_OUTPUT;
+                                    state = State.ERR_NULL_OUTPUT;
                                 } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
 
@@ -1222,7 +1176,7 @@ public abstract class RequestFiller
                                             totOutputsSent++;
                                         }
 
-                                        state = STATE_OUTPUT_SENT;
+                                        state = State.OUTPUT_SENT;
                                     } else {
                                         if (payTime < 0) {
                                             if (LOG.isErrorEnabled()) {
@@ -1237,7 +1191,7 @@ public abstract class RequestFiller
                                         numOutputsFailed++;
                                         totOutputsFailed++;
 
-                                        state = STATE_OUTPUT_FAILED;
+                                        state = State.OUTPUT_FAILED;
                                     }
                                 }
                             }
@@ -1302,7 +1256,7 @@ public abstract class RequestFiller
 
             synchronized (list) {
                 if (list.size() == 0) {
-                    state = STATE_WAITING;
+                    state = (isData ? State.WAIT_DATA : State.WAIT_REQUEST);
 
                     try {
                         list.wait(100);
@@ -1326,7 +1280,7 @@ public abstract class RequestFiller
                 }
             }
 
-            state = (isData ? STATE_GOT_DATA : STATE_GOT_REQUEST);
+            state = (isData ? State.GOT_DATA : State.GOT_REQUEST);
 
             return obj;
         }
