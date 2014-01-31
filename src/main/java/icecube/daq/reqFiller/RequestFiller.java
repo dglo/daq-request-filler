@@ -315,6 +315,11 @@ public abstract class RequestFiller
         return (double) dataPerSecX100 / 100.0;
     }
 
+    public String getDebugMsg()
+    {
+        return workerThread.getDebugMsg();
+    }
+
     /**
      * Get first output time.
      *
@@ -825,12 +830,23 @@ public abstract class RequestFiller
     class WorkerThread
         implements Runnable
     {
+        private static final long LOOP_FREQUENCY = Long.MAX_VALUE;
+
         /** Actual thread object (needed for start() method) */
         private Thread thread;
         /** <tt>true</tt> if there are no more requests. */
         private boolean reqStopped;
         /** <tt>true</tt> if there are no more data payloads. */
         private boolean dataStopped;
+
+        private long numLoops;
+        private long prevTrigF;
+        private int prevTrigQ;
+        private long prevDataF;
+        private int prevDataQ;
+
+        private String lastOp;
+        private String baseMsg;
 
         /**
          * Create and start worker thread.
@@ -955,6 +971,35 @@ public abstract class RequestFiller
             return data;
         }
 
+        public String getBaseMsg()
+        {
+            final int numTrigQ = getNumRequestsQueued();
+            final int numDataQ = getNumDataPayloadsQueued();
+
+            if (prevTrigF != numReqFetched || prevTrigQ != numTrigQ ||
+                prevDataF != numDataFetched || prevDataQ != numDataQ)
+            {
+                baseMsg =
+                    String.format("l%d r%d/q%d d%d/q%d", numLoops,
+                                  numReqFetched,
+                                  getNumRequestsQueued(),
+                                  numDataFetched,
+                                  getNumDataPayloadsQueued());
+
+                prevTrigF = numReqFetched;
+                prevTrigQ = numTrigQ;
+                prevDataF = numDataFetched;
+                prevDataQ = numDataQ;
+            }
+
+            return baseMsg;
+        }
+
+        public String getDebugMsg()
+        {
+            return getBaseMsg() + " " + lastOp;
+        }
+
         /**
          * Get next request from request queue.
          *
@@ -1036,33 +1081,14 @@ public abstract class RequestFiller
             ILoadablePayload curReq = null;
 
             boolean dangerZone = sendEmptyPayloads;
-            long numLoops = 0;
             long numChanges = 0;
-            String lastOp = "";
-            String baseMsg = "";
-
-            long prevTrigF = 0;
-            int prevTrigQ = 0;
-            long prevDataF = 0;
-            int prevDataQ = 0;
 
             while (!reqStopped || !dataStopped || curData != null) {
                 if (dangerZone) {
                     numLoops++;
 
-                    final int numTrigQ = getNumRequestsQueued();
-                    final int numDataQ = getNumDataPayloadsQueued();
-
-                    if (prevTrigF != numReqFetched || prevTrigQ != numTrigQ ||
-                        prevDataF != numDataFetched || prevDataQ != numDataQ)
-                    {
-                        baseMsg =
-                            String.format("l%d r%d/q%d d%d/q%d", numLoops,
-                                          numReqFetched,
-                                          getNumRequestsQueued(),
-                                          numDataFetched,
-                                          getNumDataPayloadsQueued());
-                        LOG.error(baseMsg + " " + lastOp);
+                    if (numLoops % LOOP_FREQUENCY == 0) {
+                        LOG.error(getBaseMsg());
                     }
 
                     if (numOutputsSent > 250000) {
