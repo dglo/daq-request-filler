@@ -845,8 +845,10 @@ public abstract class RequestFiller
         private long prevDataF;
         private int prevDataQ;
 
-        private long prevDataTime;
+        private boolean hasCurReq;
         private long prevReqTime;
+        private boolean hasCurData;
+        private long prevDataTime;
 
         private String lastOp;
         private String baseMsg;
@@ -982,12 +984,14 @@ public abstract class RequestFiller
             if (prevTrigF != numReqFetched || prevTrigQ != numTrigQ ||
                 prevDataF != numDataFetched || prevDataQ != numDataQ)
             {
+                char reqCh = hasCurReq ? '+' : '-';
+                char dataCh = hasCurData ? '+' : '-';
                 baseMsg =
-                    String.format("r%d/q%d@%d d%d/q%d@%d",
-                                  numReqFetched,
-                                  getNumRequestsQueued(), prevReqTime,
-                                  numDataFetched,
-                                  getNumDataPayloadsQueued(), prevDataTime);
+                    String.format("r%d/q%d%c%d d%d/q%d%c%d",
+                                  numReqFetched, getNumRequestsQueued(),
+                                  reqCh, prevReqTime,
+                                  numDataFetched, getNumDataPayloadsQueued(),
+                                  dataCh, prevDataTime);
 
                 prevTrigF = numReqFetched;
                 prevTrigQ = numTrigQ;
@@ -1104,7 +1108,8 @@ public abstract class RequestFiller
                 if (curReq == null && !reqStopped) {
                     lastOp = "getReq";
                     curReq = getRequest();
-                    if (curReq != null) {
+                    hasCurReq = curReq != null;
+                    if (hasCurReq) {
                         prevReqTime = curReq.getUTCTime();
                     }
                     lastOp = "gotReq";
@@ -1119,7 +1124,8 @@ public abstract class RequestFiller
                 if (curData == null && dataQueue.size() > 0) {
                     lastOp = "getData";
                     curData = getData();
-                    if (curData != null) {
+                    hasCurData = curData != null;
+                    if (hasCurData) {
                         prevDataTime = curData.getUTCTime();
                     }
                     lastOp = "gotData";
