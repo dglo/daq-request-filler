@@ -845,6 +845,9 @@ public abstract class RequestFiller
         private long prevDataF;
         private int prevDataQ;
 
+        private long prevDataTime;
+        private long prevReqTime;
+
         private String lastOp;
         private String baseMsg;
 
@@ -980,11 +983,11 @@ public abstract class RequestFiller
                 prevDataF != numDataFetched || prevDataQ != numDataQ)
             {
                 baseMsg =
-                    String.format("l%d r%d/q%d d%d/q%d", numLoops,
+                    String.format("r%d/q%d@%d d%d/q%d@%d",
                                   numReqFetched,
-                                  getNumRequestsQueued(),
+                                  getNumRequestsQueued(), prevReqTime,
                                   numDataFetched,
-                                  getNumDataPayloadsQueued());
+                                  getNumDataPayloadsQueued(), prevDataTime);
 
                 prevTrigF = numReqFetched;
                 prevTrigQ = numTrigQ;
@@ -992,7 +995,7 @@ public abstract class RequestFiller
                 prevDataQ = numDataQ;
             }
 
-            return baseMsg;
+            return String.format("l%d ", numLoops) + baseMsg;
         }
 
         public String getDebugMsg()
@@ -1101,6 +1104,9 @@ public abstract class RequestFiller
                 if (curReq == null && !reqStopped) {
                     lastOp = "getReq";
                     curReq = getRequest();
+                    if (curReq != null) {
+                        prevReqTime = curReq.getUTCTime();
+                    }
                     lastOp = "gotReq";
 
                     if (reqStopped && curData != null) {
@@ -1113,6 +1119,9 @@ public abstract class RequestFiller
                 if (curData == null && dataQueue.size() > 0) {
                     lastOp = "getData";
                     curData = getData();
+                    if (curData != null) {
+                        prevDataTime = curData.getUTCTime();
+                    }
                     lastOp = "gotData";
                 }
 
