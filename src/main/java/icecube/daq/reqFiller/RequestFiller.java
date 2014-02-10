@@ -830,7 +830,7 @@ public abstract class RequestFiller
     class WorkerThread
         implements Runnable
     {
-        private static final long LOOP_FREQUENCY = Long.MAX_VALUE;
+        private static final long LOOP_FREQUENCY = 60000;
 
         /** Actual thread object (needed for start() method) */
         private Thread thread;
