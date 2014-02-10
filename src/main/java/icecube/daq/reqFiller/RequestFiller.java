@@ -850,6 +850,9 @@ public abstract class RequestFiller
         private boolean hasCurData;
         private long prevDataTime;
 
+        private long dataWaited;
+        private long requestWaited;
+
         private String lastOp;
         private String baseMsg;
 
@@ -987,11 +990,11 @@ public abstract class RequestFiller
                 char reqCh = hasCurReq ? '+' : '-';
                 char dataCh = hasCurData ? '+' : '-';
                 baseMsg =
-                    String.format("r%d/q%d%c%d d%d/q%d%c%d",
+                    String.format("r%d/q%d/w%d%c%d d%d/q%/w%dd%c%d",
                                   numReqFetched, getNumRequestsQueued(),
-                                  reqCh, prevReqTime,
+                                  requestWaited, reqCh, prevReqTime,
                                   numDataFetched, getNumDataPayloadsQueued(),
-                                  dataCh, prevDataTime);
+                                  dataWaited, dataCh, prevDataTime);
 
                 prevTrigF = numReqFetched;
                 prevTrigQ = numTrigQ;
@@ -1334,6 +1337,12 @@ public abstract class RequestFiller
             synchronized (list) {
                 if (list.size() == 0) {
                     state = (isData ? State.WAIT_DATA : State.WAIT_REQUEST);
+
+                    if (isData) {
+                        dataWaited++;
+                    } else {
+                        requestWaited++;
+                    }
 
                     try {
                         list.wait(100);
