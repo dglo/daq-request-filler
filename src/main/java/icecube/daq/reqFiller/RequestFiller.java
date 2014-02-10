@@ -990,7 +990,7 @@ public abstract class RequestFiller
                 char reqCh = hasCurReq ? '+' : '-';
                 char dataCh = hasCurData ? '+' : '-';
                 baseMsg =
-                    String.format("r%d/q%d/w%d%c%d d%d/q%/w%dd%c%d",
+                    String.format("r%d/q%d/w%d%c%d d%d/q%d/w%d%c%d",
                                   numReqFetched, getNumRequestsQueued(),
                                   requestWaited, reqCh, prevReqTime,
                                   numDataFetched, getNumDataPayloadsQueued(),
