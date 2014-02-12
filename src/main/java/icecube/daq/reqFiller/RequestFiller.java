@@ -1014,7 +1014,6 @@ public abstract class RequestFiller
             ILoadablePayload curReq = null;
 
             while (!reqStopped || !dataStopped || curData != null) {
-                // monitor data I/O rates
                 // get next request
                 if (curReq == null && !reqStopped) {
                     curReq = getRequest();
