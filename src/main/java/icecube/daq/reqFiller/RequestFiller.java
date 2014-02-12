@@ -83,7 +83,6 @@ public abstract class RequestFiller
     private long numBadData;
     private long numBadRequests;
     private long numDataDiscarded;
-    private long numDataFetched;
     private long numDataReceived;
     private long numDataUsed;
     private long numDroppedData;
@@ -94,7 +93,6 @@ public abstract class RequestFiller
     private long numOutputsFailed;
     private long numOutputsIgnored;
     private long numOutputsSent;
-    private long numReqFetched;
     private long numRequestsReceived;
     private long outputPerSecX100;
     private long reqsPerSecX100;
@@ -313,11 +311,6 @@ public abstract class RequestFiller
     public double getDataPayloadsPerSecond()
     {
         return (double) dataPerSecX100 / 100.0;
-    }
-
-    public String getDebugMsg()
-    {
-        return workerThread.getDebugMsg();
     }
 
     /**
@@ -727,7 +720,6 @@ public abstract class RequestFiller
         numBadData = 0;
         numBadRequests = 0;
         numDataDiscarded = 0;
-        numDataFetched = 0;
         numDataReceived = 0;
         numDataUsed = 0;
         numDroppedData = 0;
@@ -737,7 +729,6 @@ public abstract class RequestFiller
         numNullOutputs = 0;
         numOutputsFailed = 0;
         numOutputsSent = 0;
-        numReqFetched = 0;
         numRequestsReceived = 0;
         outputPerSecX100 = 0;
         reqsPerSecX100 = 0;
@@ -830,31 +821,12 @@ public abstract class RequestFiller
     class WorkerThread
         implements Runnable
     {
-        private static final long LOOP_FREQUENCY = 60000;
-
         /** Actual thread object (needed for start() method) */
         private Thread thread;
         /** <tt>true</tt> if there are no more requests. */
         private boolean reqStopped;
         /** <tt>true</tt> if there are no more data payloads. */
         private boolean dataStopped;
-
-        private long numLoops;
-        private long prevTrigF;
-        private int prevTrigQ;
-        private long prevDataF;
-        private int prevDataQ;
-
-        private boolean hasCurReq;
-        private long prevReqTime;
-        private boolean hasCurData;
-        private long prevDataTime;
-
-        private long dataWaited;
-        private long requestWaited;
-
-        private String lastOp;
-        private String baseMsg;
 
         /**
          * Create and start worker thread.
@@ -923,8 +895,6 @@ public abstract class RequestFiller
             ILoadablePayload data =
                 (ILoadablePayload) syncRemove(dataQueue, true);
 
-            numDataFetched++;
-
             if (data == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found Stop data in " + threadName);
@@ -979,37 +949,6 @@ public abstract class RequestFiller
             return data;
         }
 
-        public String getBaseMsg()
-        {
-            final int numTrigQ = getNumRequestsQueued();
-            final int numDataQ = getNumDataPayloadsQueued();
-
-            if (prevTrigF != numReqFetched || prevTrigQ != numTrigQ ||
-                prevDataF != numDataFetched || prevDataQ != numDataQ)
-            {
-                char reqCh = hasCurReq ? '+' : '-';
-                char dataCh = hasCurData ? '+' : '-';
-                baseMsg =
-                    String.format("r%d/q%d/w%d%c%d d%d/q%d/w%d%c%d",
-                                  numReqFetched, getNumRequestsQueued(),
-                                  requestWaited, reqCh, prevReqTime,
-                                  numDataFetched, getNumDataPayloadsQueued(),
-                                  dataWaited, dataCh, prevDataTime);
-
-                prevTrigF = numReqFetched;
-                prevTrigQ = numTrigQ;
-                prevDataF = numDataFetched;
-                prevDataQ = numDataQ;
-            }
-
-            return String.format("l%d ", numLoops) + baseMsg;
-        }
-
-        public String getDebugMsg()
-        {
-            return getBaseMsg() + " " + lastOp;
-        }
-
         /**
          * Get next request from request queue.
          *
@@ -1020,8 +959,6 @@ public abstract class RequestFiller
         {
             ILoadablePayload req =
                 (ILoadablePayload) syncRemove(requestQueue, false);
-
-            numReqFetched++;
 
             if (req == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
@@ -1073,49 +1010,13 @@ public abstract class RequestFiller
          */
         public void run()
         {
-            try {
-                runInternal();
-            } catch (Throwable thr) {
-                LOG.error("Main loop failed", thr);
-            }
-        }
-
-        /**
-         * Real processing loop.
-         */
-        private void runInternal()
-        {
-            LOG.error("Starting main loop");
-
             ILoadablePayload curData = null;
             ILoadablePayload curReq = null;
 
-            boolean dangerZone = sendEmptyPayloads;
-            long numChanges = 0;
-
             while (!reqStopped || !dataStopped || curData != null) {
-                if (dangerZone) {
-                    numLoops++;
-
-                    if (numLoops % LOOP_FREQUENCY == 0) {
-                        LOG.error(getBaseMsg());
-                    }
-
-                    if (numOutputsSent > 250000) {
-                        dangerZone = false;
-                        baseMsg = "[safe zone] ";
-                    }
-                }
-
                 // get next request
                 if (curReq == null && !reqStopped) {
-                    lastOp = "getReq";
                     curReq = getRequest();
-                    hasCurReq = curReq != null;
-                    if (hasCurReq) {
-                        prevReqTime = curReq.getUTCTime();
-                    }
-                    lastOp = "gotReq";
 
                     if (reqStopped && curData != null) {
                         disposeData(curData);
@@ -1125,13 +1026,7 @@ public abstract class RequestFiller
 
                 // get next data payload
                 if (curData == null && dataQueue.size() > 0) {
-                    lastOp = "getData";
                     curData = getData();
-                    hasCurData = curData != null;
-                    if (hasCurData) {
-                        prevDataTime = curData.getUTCTime();
-                    }
-                    lastOp = "gotData";
                 }
 
                 // if we're out of requests but still have data
@@ -1142,7 +1037,6 @@ public abstract class RequestFiller
 
                 // try to fit the data with the request
                 if (curReq != null && (dataStopped || curData != null)) {
-                    lastOp = "fillReq";
                     if (dataStopped && curData == null &&
                         requestedData.size() == 0)
                     {
@@ -1159,15 +1053,12 @@ public abstract class RequestFiller
                         if (curData == null) {
                             cmp = 1;
                         } else {
-                            lastOp = "compare";
                             cmp = compareRequestAndData(curReq, curData);
-                            lastOp = "compared";
                         }
 
                         if (cmp < 0) {
                             // data is before current request, throw it away
 
-                            lastOp = "cmpLT";
                             disposeData(curData);
                             curData = null;
 
@@ -1178,7 +1069,6 @@ public abstract class RequestFiller
                         } else if (cmp == 0) {
                             // data is within the current request
 
-                            lastOp = "cmpEQ";
                             if (!isRequested(curReq, curData)) {
                                 numDataDiscarded++;
                                 totDataDiscarded++;
@@ -1194,7 +1084,6 @@ public abstract class RequestFiller
 
                             curData = null;
                         } else {
-                            lastOp = "cmpGT";
                             if (requestedData.size() == 0 &&
                                 !sendEmptyPayloads)
                             {
@@ -1213,8 +1102,6 @@ public abstract class RequestFiller
                                 state = State.OUTPUT_IGNORED;
                             } else {
                                 // data is past current request, build output!
-
-                                lastOp = "build";
 
                                 // keep track of number of payloads used
                                 numDataUsed += requestedData.size();
@@ -1236,8 +1123,6 @@ public abstract class RequestFiller
                                     state = State.ERR_NULL_OUTPUT;
                                 } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
-
-                                    lastOp = "send";
 
                                     final long payTime = payload.getUTCTime();
                                     if (payTime >= 0 && sendOutput(payload)) {
@@ -1270,8 +1155,6 @@ public abstract class RequestFiller
                                 }
                             }
 
-                            lastOp = "clean";
-
                             // clean up request memory
                             curReq.recycle();
                             curReq = null;
@@ -1296,8 +1179,6 @@ public abstract class RequestFiller
                     }
                 }
             }
-            LOG.error("reqStopped " + reqStopped + " dataStopped " +
-                      dataStopped + " curData " + curData);
 
             // clean up before exiting
             clearCache();
@@ -1305,8 +1186,6 @@ public abstract class RequestFiller
             finishThreadCleanup();
 
             workerThread = null;
-
-            LOG.error("Exiting main loop");
         }
 
         /**
@@ -1337,12 +1216,6 @@ public abstract class RequestFiller
             synchronized (list) {
                 if (list.size() == 0) {
                     state = (isData ? State.WAIT_DATA : State.WAIT_REQUEST);
-
-                    if (isData) {
-                        dataWaited++;
-                    } else {
-                        requestWaited++;
-                    }
 
                     try {
                         list.wait(100);
