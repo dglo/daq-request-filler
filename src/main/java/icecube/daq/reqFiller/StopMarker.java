@@ -16,7 +16,6 @@ import icecube.daq.payload.IUTCTime;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.zip.DataFormatException;
 
 /**
  * Internal marker pushed onto a payload queue
@@ -222,11 +221,8 @@ final class StopMarker
      * Should not be used; throws an Error.
      *
      * @return Error
-     *
-     * @throws DataFormatException never
      */
     public List getPayloads()
-        throws DataFormatException
     {
         throw new Error("StopMarker");
     }

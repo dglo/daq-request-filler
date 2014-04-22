@@ -6,7 +6,6 @@ import icecube.daq.payload.IUTCTime;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.zip.DataFormatException;
 
 public class DummyPayload
     implements ILoadablePayload
@@ -72,7 +71,6 @@ public class DummyPayload
     }
 
     public void loadPayload()
-        throws IOException, DataFormatException
     {
         // do nothing
     }
