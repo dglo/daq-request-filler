@@ -6,7 +6,6 @@ import icecube.daq.payload.IHitDataPayload;
 import icecube.daq.payload.IHitDataRecord;
 import icecube.daq.payload.IHitPayload;
 import icecube.daq.payload.ILoadablePayload;
-import icecube.daq.payload.IPayloadDestination;
 import icecube.daq.payload.IReadoutDataPayload;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.ISourceID;
@@ -410,15 +409,6 @@ final class StopMarker
     public void setUID(int uid)
     {
         throw new Error("Unimplemented");
-    }
-
-    /**
-     * Object knows how to recycle itself
-     */
-    public int writePayload(boolean writeLoaded, IPayloadDestination pDest)
-        throws IOException
-    {
-        throw new Error("StopMarker");
     }
 
     /**
