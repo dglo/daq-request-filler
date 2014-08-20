@@ -4,7 +4,6 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IUTCTime;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class DummyPayload
