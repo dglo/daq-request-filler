@@ -1,5 +1,7 @@
 package icecube.daq.reqFiller;
 
+import icecube.daq.util.CodeTimer;
+
 /**
  * Rudimentary profiler for payload request fulfillment engine.
  */
