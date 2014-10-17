@@ -36,13 +36,6 @@ public class DummyPayload
     }
 
     /**
-     * returns the length in bytes of this payload
-     */
-    public int getPayloadLength() {
-        return length();
-    }
-
-    /**
      * gets the UTC time tag of a payload
      */
     public IUTCTime getPayloadTimeUTC() {

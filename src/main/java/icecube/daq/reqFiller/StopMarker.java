@@ -181,16 +181,6 @@ final class StopMarker
      *
      * @return Error
      */
-    public int getPayloadLength()
-    {
-        throw new Error("StopMarker");
-    }
-
-    /**
-     * Should not be used; throws an Error.
-     *
-     * @return Error
-     */
     public int getPayloadType()
     {
         return PAYLOAD_TYPE;

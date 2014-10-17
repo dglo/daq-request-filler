@@ -150,11 +150,6 @@ class TestData
         throw new Error("Unimplemented");
     }
 
-    public int getPayloadLength()
-    {
-        throw new Error("Unimplemented");
-    }
-
     public int getPayloadType()
     {
         throw new Error("Unimplemented");
