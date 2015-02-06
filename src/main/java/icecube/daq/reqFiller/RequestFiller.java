@@ -1235,7 +1235,12 @@ public abstract class RequestFiller
                 if (list.size() == 0) {
                     obj = null;
                 } else {
-                    obj = list.remove(0);
+                    try {
+                        obj = list.remove(0);
+                    } catch (NullPointerException npe) {
+                        // guard against a one-in-a-quadrillion bug
+                        obj = null;
+                    }
                 }
             }
 
