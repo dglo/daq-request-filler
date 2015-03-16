@@ -821,12 +821,18 @@ public abstract class RequestFiller
     class WorkerThread
         implements Runnable
     {
+        /** Number of sequential NPEs allowed before the thread is killed */
+        private static final int MAX_NULL_POINTER_EXCEPTIONS = 10;
+
         /** Actual thread object (needed for start() method) */
         private Thread thread;
         /** <tt>true</tt> if there are no more requests. */
         private boolean reqStopped;
         /** <tt>true</tt> if there are no more data payloads. */
         private boolean dataStopped;
+
+        /** NullPointerException counter */
+        private int nullPtrCount;
 
         /**
          * Create and start worker thread.
@@ -889,11 +895,26 @@ public abstract class RequestFiller
          *
          * @return payload or <tt>null</tt>
          *         and set appropriate value in <tt>state</tt> attribute
+         *
+         * @throws IOException if we repeatedly hit the mysterious null pointer
+         *         exception
          */
-        ILoadablePayload getData()
+        private ILoadablePayload getData()
+            throws IOException
         {
-            ILoadablePayload data =
-                (ILoadablePayload) syncRemove(dataQueue, true);
+            ILoadablePayload data;
+            try {
+                data = (ILoadablePayload) syncRemove(dataQueue, true);
+                nullPtrCount = 0;
+            } catch (NullPointerException npe) {
+                if (nullPtrCount++ < MAX_NULL_POINTER_EXCEPTIONS) {
+                    LOG.error("Ignoring NPE#" + nullPtrCount, npe);
+                    data = null;
+                } else {
+                    throw new IOException("Cannot get data after " +
+                                          nullPtrCount + " attempts", npe);
+                }
+            }
 
             if (data == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
@@ -1026,7 +1047,20 @@ public abstract class RequestFiller
 
                 // get next data payload
                 if (curData == null && dataQueue.size() > 0) {
-                    curData = getData();
+                    try {
+                        curData = getData();
+                    } catch (IOException ioe) {
+                        LOG.error("Stopping thread due to unexpected" +
+                                  " exception", ioe);
+                        // XXX this may still cause trouble, but I'd like to
+                        // at least *try* to shut down as nicely as possible
+                        try {
+                            stopThread();
+                        } catch (IOException ioe2) {
+                            LOG.error("Failed to stop thread; aborting", ioe2);
+                            break;
+                        }
+                    }
                 }
 
                 // if we're out of requests but still have data
