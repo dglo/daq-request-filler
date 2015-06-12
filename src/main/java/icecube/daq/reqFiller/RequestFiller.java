@@ -683,11 +683,6 @@ public abstract class RequestFiller
                                                      List dataList);
 
     /**
-     * Recycle payloads left after the final output payload.
-     */
-    public abstract void recycleFinalData();
-
-    /**
      * Reset the request filler after it has been stopped.
      */
     public void reset()
@@ -1216,7 +1211,6 @@ public abstract class RequestFiller
 
             // clean up before exiting
             clearCache();
-            recycleFinalData();
             finishThreadCleanup();
 
             workerThread = null;
