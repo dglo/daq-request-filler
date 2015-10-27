@@ -1064,8 +1064,11 @@ public abstract class RequestFiller
                     curData = null;
                 }
 
-                // try to fit the data with the request
-                if (curReq != null && (dataStopped || curData != null)) {
+                if (curReq == null || (!dataStopped && curData == null)) {
+                    // if there's no data, give other threads a chance
+                    Thread.yield();
+                } else {
+                    // try to fit the data with the request
                     if (dataStopped && curData == null &&
                         requestedData.size() == 0)
                     {
