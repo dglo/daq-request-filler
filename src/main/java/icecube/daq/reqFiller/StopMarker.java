@@ -67,6 +67,15 @@ final class StopMarker
     }
 
     /**
+     * Get channel ID
+     * @return channel ID
+     */
+    public short getChannelID()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
      * Should not be used; throws an Error.
      *
      * @return Error
@@ -312,6 +321,15 @@ final class StopMarker
      * @return Error
      */
     public long getUTCTime()
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Return<tt>true</tt> if this hit has a channel ID instead of
+     * source and DOM IDs
+     */
+    public boolean hasChannelID()
     {
         throw new Error("StopMarker");
     }
