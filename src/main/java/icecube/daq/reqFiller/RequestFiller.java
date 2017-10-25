@@ -26,40 +26,6 @@ public abstract class RequestFiller
     /** Message logger. */
     private static final Log LOG = LogFactory.getLog(RequestFiller.class);
 
-    enum State {
-        ERR_UNKNOWN("Unknown state"),
-        ERR_NULL_DATA("Null data payload"),
-        ERR_NULL_OUTPUT("Null hit"),
-        ERR_BAD_REQUEST("Null request"),
-        ERR_BAD_DATA("Null output"),
-
-        STOP_REQUEST("Global request STOP received"),
-        STOP_DATA("Splicer STOP received"),
-
-        EMPTY_LOOP("Empty loop"),
-        WAIT_REQUEST("Waiting for request"),
-        WAIT_DATA("Waiting for data"),
-        GOT_REQUEST("Got request"),
-        GOT_DATA("Got data"),
-        LOADED_REQUEST("Loaded request"),
-        LOADED_DATA("Loaded data"),
-        TOSSED_REQUEST("Threw away unused request"),
-        TOSSED_DATA("Threw away unused data"),
-        EARLY_DATA("Got early data"),
-        SAVED_DATA("Data was saved"),
-        OUTPUT_SENT("Sent output"),
-        OUTPUT_FAILED("Could not send output"),
-        OUTPUT_IGNORED("Ignored empty output");
-
-        private String description;
-
-        State(String description) {
-            this.description = description;
-        }
-
-        String getDescription() { return description; }
-    };
-
     /** Thread name. */
     private String threadName;
     /** <tt>true</tt> if empty output payloads should be sent. */
@@ -77,42 +43,21 @@ public abstract class RequestFiller
     private Object outputDataLock = new Object();
 
     // per-run monitoring counters
-    private long dataPerSecX100;
     private long firstOutputTime;
     private long lastOutputTime;
-    private long numBadData;
-    private long numBadRequests;
-    private long numDataDiscarded;
     private long numDataReceived;
-    private long numDataUsed;
-    private long numDroppedData;
-    private long numDroppedRequests;
-    private long numEmptyLoops;
-    private long numNullData;
-    private long numNullOutputs;
     private long numOutputsFailed;
     private long numOutputsIgnored;
     private long numOutputsSent;
     private long numRequestsReceived;
-    private long outputPerSecX100;
-    private long reqsPerSecX100;
 
     // lifetime monitoring counters
-    private long totBadData;
-    private long totDataDiscarded;
     private long totDataReceived;
     private long totDataStops;
-    private long totOutputsFailed;
-    private long totOutputsIgnored;
-    private long totOutputsSent;
-    private long totRequestsReceived;
     private long totRequestStops;
 
     // ceiling for number of failed outputs
     private long maxOutputFailures = 10;
-
-    // current state
-    private State state = State.ERR_UNKNOWN;
 
     // time at start of year
     private long jan1Millis = Long.MIN_VALUE;
@@ -232,7 +177,6 @@ public abstract class RequestFiller
             requestQueue.add(newReq);
 
             numRequestsReceived++;
-            totRequestsReceived++;
 
             requestQueue.notify();
         }
@@ -290,30 +234,6 @@ public abstract class RequestFiller
     public abstract void finishThreadCleanup();
 
     /**
-     * Get average number of data payloads per output payload.
-     *
-     * @return data payloads/output payload
-     */
-    public long getAverageOutputDataPayloads()
-    {
-        if (numOutputsSent == 0) {
-            return 0;
-        }
-
-        return numDataUsed / numOutputsSent;
-    }
-
-    /**
-     * Get current rate of data payloads per second.
-     *
-     * @return data payloads/second
-     */
-    public double getDataPayloadsPerSecond()
-    {
-        return (double) dataPerSecX100 / 100.0;
-    }
-
-    /**
      * Get first output time.
      *
      * @return first output time
@@ -321,26 +241,6 @@ public abstract class RequestFiller
     public long getFirstOutputTime()
     {
         return firstOutputTime;
-    }
-
-    /**
-     * Get current state.
-     *
-     * @return state string
-     */
-    public String getInternalState()
-    {
-        return state.getDescription();
-    }
-
-    /**
-     * Get internal timing profile.
-     *
-     * @return internal timing profile
-     */
-    public String getInternalTiming()
-    {
-        return (workerThread == null ? "NOT RUNNING" : "NOT AVAILABLE");
     }
 
     /**
@@ -380,26 +280,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Number of data payloads which could not be loaded.
-     *
-     * @return number of bad data payloads
-     */
-    public long getNumBadDataPayloads()
-    {
-        return numBadData;
-    }
-
-    /**
-     * Number of requests which could not be loaded.
-     *
-     * @return number of bad requests
-     */
-    public long getNumBadRequests()
-    {
-        return numBadRequests;
-    }
-
-    /**
      * Get number of data payloads cached for next output payload
      *
      * @return number of cached data payloads
@@ -407,26 +287,6 @@ public abstract class RequestFiller
     public int getNumDataPayloadsCached()
     {
         return requestedData.size();
-    }
-
-    /**
-     * Get number of data payloads thrown away.
-     *
-     * @return number of data payloads thrown away
-     */
-    public long getNumDataPayloadsDiscarded()
-    {
-        return numDataDiscarded;
-    }
-
-    /**
-     * Get number of data payloads dropped while stopping.
-     *
-     * @return number of data payloads dropped
-     */
-    public long getNumDataPayloadsDropped()
-    {
-        return numDroppedData;
     }
 
     /**
@@ -450,56 +310,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Get number of passes through the main loop without a request.
-     *
-     * @return number of empty loops
-     */
-    public long getNumEmptyLoops()
-    {
-        return numEmptyLoops;
-    }
-
-    /**
-     * Get number of null data payloads received.
-     *
-     * @return number of null data payloads received
-     */
-    public long getNumNullDataPayloads()
-    {
-        return numNullData;
-    }
-
-    /**
-     * Get number of output payloads which could not be created.
-     *
-     * @return number of null output payloads
-     */
-    public long getNumNullOutputs()
-    {
-        return numNullOutputs;
-    }
-
-    /**
-     * Get number of outputs which could not be sent.
-     *
-     * @return number of failed outputs
-     */
-    public long getNumOutputsFailed()
-    {
-        return numOutputsFailed;
-    }
-
-    /**
-     * Get number of ignored empty output payloads.
-     *
-     * @return number of ignored empty output payloads
-     */
-    public long getNumOutputsIgnored()
-    {
-        return numOutputsIgnored;
-    }
-
-    /**
      * Get number of outputs sent.
      *
      * @return number of outputs sent
@@ -507,16 +317,6 @@ public abstract class RequestFiller
     public long getNumOutputsSent()
     {
         return numOutputsSent;
-    }
-
-    /**
-     * Number of requests dropped while stopping.
-     *
-     * @return number of requests dropped
-     */
-    public long getNumRequestsDropped()
-    {
-        return numDroppedRequests;
     }
 
     /**
@@ -540,46 +340,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Get current rate of output payloads per second.
-     *
-     * @return outputs/second
-     */
-    public double getOutputsPerSecond()
-    {
-        return (double) outputPerSecX100 / 100.0;
-    }
-
-    /**
-     * Get current rate of requests per second.
-     *
-     * @return requests/second
-     */
-    public double getRequestsPerSecond()
-    {
-        return (double) reqsPerSecX100 / 100.0;
-    }
-
-    /**
-     * Get total number of unloadable data payloads since last reset
-     *
-     * @return total number of bad data payloads since last reset
-     */
-    public long getTotalBadDataPayloads()
-    {
-        return totBadData;
-    }
-
-    /**
-     * Total number of data payloads thrown away since last reset.
-     *
-     * @return total number of data payloads thrown away since last reset
-     */
-    public long getTotalDataPayloadsDiscarded()
-    {
-        return totDataDiscarded;
-    }
-
-    /**
      * Total number of data payloads received since last reset.
      *
      * @return total number of data payloads received since last reset
@@ -600,36 +360,6 @@ public abstract class RequestFiller
     }
 
     /**
-     * Total number of unsendable output payloads since last reset.
-     *
-     * @return total number of failed output payloads
-     */
-    public long getTotalOutputsFailed()
-    {
-        return totOutputsFailed;
-    }
-
-    /**
-     * Total number of ignored empty output payloads since last reset.
-     *
-     * @return total number of ignored empty output payloads
-     */
-    public long getTotalOutputsIgnored()
-    {
-        return totOutputsIgnored;
-    }
-
-    /**
-     * Total number of output payloads sent since last reset.
-     *
-     * @return total number of output payloads sent since last reset.
-     */
-    public long getTotalOutputsSent()
-    {
-        return totOutputsSent;
-    }
-
-    /**
      * Total number of stop messages received from the request source.
      *
      * @return total number of received stop messages
@@ -637,16 +367,6 @@ public abstract class RequestFiller
     public long getTotalRequestStopsReceived()
     {
         return totRequestStops;
-    }
-
-    /**
-     * Total number of requests received.
-     *
-     * @return total number of requests received
-     */
-    public long getTotalRequestsReceived()
-    {
-        return totRequestsReceived;
     }
 
     /**
@@ -689,8 +409,6 @@ public abstract class RequestFiller
     {
         resetCounters();
 
-        state = State.ERR_UNKNOWN;
-
         if (dataQueue.size() > 0) {
             if (LOG.isErrorEnabled()) {
                 LOG.error("Data payloads queued at " + threadName + " reset");
@@ -709,24 +427,12 @@ public abstract class RequestFiller
 
     private void resetCounters()
     {
-        dataPerSecX100 = 0;
         firstOutputTime = 0;
         lastOutputTime = 0;
-        numBadData = 0;
-        numBadRequests = 0;
-        numDataDiscarded = 0;
         numDataReceived = 0;
-        numDataUsed = 0;
-        numDroppedData = 0;
-        numDroppedRequests = 0;
-        numEmptyLoops = 0;
-        numNullData = 0;
-        numNullOutputs = 0;
         numOutputsFailed = 0;
         numOutputsSent = 0;
         numRequestsReceived = 0;
-        outputPerSecX100 = 0;
-        reqsPerSecX100 = 0;
     }
 
     public long[] resetOutputData()
@@ -871,7 +577,6 @@ public abstract class RequestFiller
                                       " in " + threadName);
                         }
                     } else {
-                        numDroppedRequests++;
                         data.recycle();
                     }
                 }
@@ -889,7 +594,6 @@ public abstract class RequestFiller
          * Get next payload from input queue.
          *
          * @return payload or <tt>null</tt>
-         *         and set appropriate value in <tt>state</tt> attribute
          *
          * @throws IOException if we repeatedly hit the mysterious null pointer
          *         exception
@@ -924,23 +628,14 @@ public abstract class RequestFiller
                 totDataStops++;
 
                 data = null;
-
-                state = State.STOP_DATA;
             } else if (data == null) {
-                numNullData++;
-
                 if (LOG.isErrorEnabled()) {
                     LOG.error("Saw null data payload in " + threadName);
                 }
-
-                state = State.ERR_NULL_DATA;
             } else if (reqStopped) {
                 disposeData(data);
 
-                numDroppedData++;
                 data = null;
-
-                state = State.TOSSED_DATA;
             } else {
                 try {
                     data.loadPayload();
@@ -951,14 +646,6 @@ public abstract class RequestFiller
                     }
 
                     data = null;
-                    numBadData++;
-                    totBadData++;
-                }
-
-                if (data == null) {
-                    state = State.ERR_BAD_DATA;
-                } else {
-                    state = State.LOADED_DATA;
                 }
             }
 
@@ -969,7 +656,6 @@ public abstract class RequestFiller
          * Get next request from request queue.
          *
          * @return request or <tt>null</tt>
-         *         and set appropriate value in <tt>state</tt> attribute
          */
         ILoadablePayload getRequest()
         {
@@ -989,13 +675,7 @@ public abstract class RequestFiller
                 totRequestStops++;
 
                 req = null;
-
-                state = State.STOP_REQUEST;
-            } else if (req == null) {
-                numEmptyLoops++;
-
-                state = State.EMPTY_LOOP;
-            } else {
+            } else if (req != null) {
                 try {
                     req.loadPayload();
                 } catch (Exception ex) {
@@ -1007,14 +687,8 @@ public abstract class RequestFiller
                     req = null;
                 }
 
-                if (req == null) {
-                    numBadRequests++;
-
-                    state = State.ERR_BAD_REQUEST;
-                } else {
+                if (req != null) {
                     setRequestTimes(req);
-
-                    state = State.LOADED_REQUEST;
                 }
             }
 
@@ -1073,13 +747,8 @@ public abstract class RequestFiller
                         requestedData.size() == 0)
                     {
                         // no more data, discard the current request
-
-                        numDroppedRequests++;
-
                         curReq.recycle();
                         curReq = null;
-
-                        state = State.TOSSED_REQUEST;
                     } else {
                         final int cmp;
                         if (curData == null) {
@@ -1093,25 +762,13 @@ public abstract class RequestFiller
 
                             disposeData(curData);
                             curData = null;
-
-                            numDataDiscarded++;
-                            totDataDiscarded++;
-
-                            state = State.EARLY_DATA;
                         } else if (cmp == 0) {
                             // data is within the current request
 
                             if (!isRequested(curReq, curData)) {
-                                numDataDiscarded++;
-                                totDataDiscarded++;
-
                                 disposeData(curData);
-
-                                state = State.TOSSED_DATA;
                             } else {
                                 requestedData.add(curData);
-
-                                state = State.SAVED_DATA;
                             }
 
                             curData = null;
@@ -1121,7 +778,6 @@ public abstract class RequestFiller
                             {
                                 // ignore empty payloads
                                 numOutputsIgnored++;
-                                totOutputsIgnored++;
 
                                 if (LOG.isDebugEnabled() &&
                                     numOutputsIgnored % 1000 == 0)
@@ -1130,13 +786,8 @@ public abstract class RequestFiller
                                               " #" + numOutputsIgnored +
                                               " in " + threadName);
                                 }
-
-                                state = State.OUTPUT_IGNORED;
                             } else {
                                 // data is past current request, build output!
-
-                                // keep track of number of payloads used
-                                numDataUsed += requestedData.size();
 
                                 // build the output payload
                                 ILoadablePayload payload =
@@ -1149,10 +800,6 @@ public abstract class RequestFiller
                                         LOG.error("Could not create output " +
                                                   "payload in " + threadName);
                                     }
-
-                                    numNullOutputs++;
-
-                                    state = State.ERR_NULL_OUTPUT;
                                 } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
 
@@ -1164,10 +811,7 @@ public abstract class RequestFiller
                                                 firstOutputTime = payTime;
                                             }
                                             numOutputsSent++;
-                                            totOutputsSent++;
                                         }
-
-                                        state = State.OUTPUT_SENT;
                                     } else {
                                         if (payTime < 0) {
                                             if (LOG.isErrorEnabled()) {
@@ -1180,9 +824,6 @@ public abstract class RequestFiller
                                         }
 
                                         numOutputsFailed++;
-                                        totOutputsFailed++;
-
-                                        state = State.OUTPUT_FAILED;
                                     }
                                 }
                             }
@@ -1246,8 +887,6 @@ public abstract class RequestFiller
 
             synchronized (list) {
                 if (list.size() == 0) {
-                    state = (isData ? State.WAIT_DATA : State.WAIT_REQUEST);
-
                     try {
                         list.wait(100);
                     } catch (InterruptedException ie) {
@@ -1274,8 +913,6 @@ public abstract class RequestFiller
                     }
                 }
             }
-
-            state = (isData ? State.GOT_DATA : State.GOT_REQUEST);
 
             return obj;
         }
