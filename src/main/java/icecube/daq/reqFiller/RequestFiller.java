@@ -1,5 +1,6 @@
 package icecube.daq.reqFiller;
 
+import icecube.daq.io.StreamMetaData;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
@@ -277,6 +278,16 @@ public abstract class RequestFiller
         final double latencyInSeconds = latencyInTicks / 10000000000.0;
 
         return latencyInSeconds;
+    }
+
+    /**
+     * Get the number of dispatched events and last dispatched time.
+     *
+     * @return metadata object
+     */
+    public StreamMetaData getMetaData()
+    {
+        return new StreamMetaData(numOutputsSent, lastOutputTime);
     }
 
     /**
