@@ -97,6 +97,7 @@ public class BackEndTimer
      *
      * @return timing info
      */
+    @Override
     public String getStats()
     {
         if (TIME_NAMES.length != NUM_TIMES) {
@@ -112,6 +113,7 @@ public class BackEndTimer
      *
      * @return timing info
      */
+    @Override
     public String toString()
     {
         return getStats();
