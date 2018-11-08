@@ -10,8 +10,7 @@ import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 /**
  * Generic request fulfillment engine.
@@ -25,7 +24,7 @@ public abstract class RequestFiller
     private static final StopMarker STOP_MARKER = StopMarker.INSTANCE;
 
     /** Message logger. */
-    private static final Log LOG = LogFactory.getLog(RequestFiller.class);
+    private static final Logger LOG = Logger.getLogger(RequestFiller.class);
 
     /** Thread name. */
     private String threadName;
@@ -89,7 +88,7 @@ public abstract class RequestFiller
     public void addData(List newData, int offset)
         throws IOException
     {
-        if (!isRunning() && LOG.isErrorEnabled()) {
+        if (!isRunning()) {
             throw new IOException("Adding data while thread " + threadName +
                                   " is stopped");
         }
@@ -421,9 +420,7 @@ public abstract class RequestFiller
         resetCounters();
 
         if (dataQueue.size() > 0) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Data payloads queued at " + threadName + " reset");
-            }
+            LOG.error("Data payloads queued at " + threadName + " reset");
 
             synchronized (dataQueue) {
                 disposeDataList(dataQueue);
@@ -498,9 +495,7 @@ public abstract class RequestFiller
     public void startThread()
     {
         if (isRunning()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Thread " + threadName + " already running!");
-            }
+            LOG.error("Thread " + threadName + " already running!");
         } else {
             workerThread = new WorkerThread(threadName);
             workerThread.start();
@@ -565,7 +560,7 @@ public abstract class RequestFiller
             synchronized (requestQueue) {
                 final int numLeft = requestQueue.size();
 
-                if (numLeft > 0 && LOG.isErrorEnabled()) {
+                if (numLeft > 0) {
                     LOG.error("clearCache() called for " + numLeft +
                               " requests in " + threadName);
                 }
@@ -575,7 +570,7 @@ public abstract class RequestFiller
                     ILoadablePayload data =
                         (ILoadablePayload) requestQueue.get(i);
                     if (data == STOP_MARKER) {
-                        if (sawStop && LOG.isErrorEnabled()) {
+                        if (sawStop) {
                             LOG.error("Saw multiple request stops in " +
                                       threadName);
                         }
@@ -583,16 +578,14 @@ public abstract class RequestFiller
                         sawStop = true;
                         totRequestStops++;
                     } else if (data == null) {
-                        if (LOG.isErrorEnabled()) {
-                            LOG.error("Dropping null request#" + (i + 1) +
-                                      " in " + threadName);
-                        }
+                        LOG.error("Dropping null request#" + (i + 1) +
+                                  " in " + threadName);
                     } else {
                         data.recycle();
                     }
                 }
 
-                if (numLeft > 0 && !sawStop && LOG.isErrorEnabled()) {
+                if (numLeft > 0 && !sawStop) {
                     LOG.error("Didn't see stop message while" +
                               " clearing request cache for " + threadName);
                 }
@@ -631,7 +624,7 @@ public abstract class RequestFiller
                     LOG.debug("Found Stop data in " + threadName);
                 }
 
-                if (dataStopped && LOG.isErrorEnabled()) {
+                if (dataStopped) {
                     LOG.error("Saw multiple splicer stops in " + threadName);
                 }
 
@@ -640,9 +633,7 @@ public abstract class RequestFiller
 
                 data = null;
             } else if (data == null) {
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Saw null data payload in " + threadName);
-                }
+                LOG.error("Saw null data payload in " + threadName);
             } else if (reqStopped) {
                 disposeData(data);
 
@@ -651,10 +642,8 @@ public abstract class RequestFiller
                 try {
                     data.loadPayload();
                 } catch (Exception ex) {
-                    if (LOG.isErrorEnabled()) {
-                        LOG.error("Couldn't load " + data.getClass().getName(),
-                                  ex);
-                    }
+                    LOG.error("Couldn't load " + data.getClass().getName(),
+                              ex);
 
                     data = null;
                 }
@@ -678,7 +667,7 @@ public abstract class RequestFiller
                     LOG.debug("Found Stop request in " + threadName);
                 }
 
-                if (reqStopped && LOG.isErrorEnabled()) {
+                if (reqStopped) {
                     LOG.error("Saw multiple request stops in " + threadName);
                 }
 
@@ -690,10 +679,8 @@ public abstract class RequestFiller
                 try {
                     req.loadPayload();
                 } catch (Exception ex) {
-                    if (LOG.isErrorEnabled()) {
-                        LOG.error("Couldn't load request payload for " +
-                                  threadName, ex);
-                    }
+                    LOG.error("Couldn't load request payload for " +
+                              threadName, ex);
 
                     req = null;
                 }
@@ -808,10 +795,8 @@ public abstract class RequestFiller
                                 if (payload == null) {
                                     // couldn't create output payload
 
-                                    if (LOG.isErrorEnabled()) {
-                                        LOG.error("Could not create output " +
-                                                  "payload in " + threadName);
-                                    }
+                                    LOG.error("Could not create output " +
+                                              "payload in " + threadName);
                                 } else if (payload != DROPPED_PAYLOAD) {
                                     // send the output payload
 
@@ -826,13 +811,11 @@ public abstract class RequestFiller
                                         }
                                     } else {
                                         if (payTime < 0) {
-                                            if (LOG.isErrorEnabled()) {
-                                                final String msg =
-                                                    "Could not send payload" +
-                                                    " with negative time: " +
-                                                    payload;
-                                                LOG.error(msg);
-                                            }
+                                            final String msg =
+                                                "Could not send payload" +
+                                                " with negative time: " +
+                                                payload;
+                                            LOG.error(msg);
                                         }
 
                                         numOutputsFailed++;
