@@ -4,9 +4,7 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IUTCTime;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.zip.DataFormatException;
 
 public class DummyPayload
     implements ILoadablePayload
@@ -19,10 +17,12 @@ public class DummyPayload
      *
      * @return Object which is a copy of the object which implements this interface.
      */
+    @Override
     public Object deepCopy() {
         return new DummyPayload();
     }
 
+    @Override
     public ByteBuffer getPayloadBacking()
     {
         throw new Error("Unimplemented");
@@ -33,20 +33,15 @@ public class DummyPayload
      *
      * @return int ... one of the defined types in icecube.daq.payload.PayloadInterfaceRegistry
      */
+    @Override
     public int getPayloadInterfaceType() {
         return -1;
     }
 
     /**
-     * returns the length in bytes of this payload
-     */
-    public int getPayloadLength() {
-        return length();
-    }
-
-    /**
      * gets the UTC time tag of a payload
      */
+    @Override
     public IUTCTime getPayloadTimeUTC() {
         return null;
     }
@@ -54,6 +49,7 @@ public class DummyPayload
     /**
      * returns the Payload type
      */
+    @Override
     public int getPayloadType() {
         return -1;
     }
@@ -61,32 +57,37 @@ public class DummyPayload
     /**
      * gets the UTC time tag of a payload as a long value
      */
+    @Override
     public long getUTCTime()
     {
         return 0;
     }
 
+    @Override
     public int length()
     {
         return 0;
     }
 
+    @Override
     public void loadPayload()
-        throws IOException, DataFormatException
     {
         // do nothing
     }
 
+    @Override
     public void recycle()
     {
         // do nothing
     }
 
+    @Override
     public void setCache(IByteBufferCache cache)
     {
         // do nothing
     }
 
+    @Override
     public String toString()
     {
         return "Dummy";

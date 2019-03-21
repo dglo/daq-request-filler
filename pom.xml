@@ -9,8 +9,8 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>daq-request-filler</artifactId>
   <packaging>jar</packaging>
-  <name>daq-request-filler</name>
-  <description>The ${project.name} sub-system (only used in simulation) of the Surface Data Acquisition system for the IceCube Project.</description>
+  <name>Time-range request filler</name>
+  <description>The ${project.name} sub-system of the Surface Data Acquisition system for the IceCube Project.</description>
 
   <scm>
     <connection>scm:svn:http://code.icecube.wisc.edu/daq/projects/${project.name}/trunk</connection>
@@ -26,6 +26,11 @@
     <dependency>
       <groupId>edu.wisc.icecube</groupId>
       <artifactId>payload</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.wisc.icecube</groupId>
+      <artifactId>daq-io</artifactId>
     </dependency>
   </dependencies>
 
