@@ -205,17 +205,6 @@ final class StopMarker
      * @return Error
      */
     @Override
-    public int getPayloadInterfaceType()
-    {
-        throw new Error("StopMarker");
-    }
-
-    /**
-     * Should not be used; throws an Error.
-     *
-     * @return Error
-     */
-    @Override
     public IUTCTime getPayloadTimeUTC()
     {
         throw new Error("StopMarker");

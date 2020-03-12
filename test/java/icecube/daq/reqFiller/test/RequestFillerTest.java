@@ -161,11 +161,6 @@ class TestData
         throw new Error("Unimplemented");
     }
 
-    public int getPayloadInterfaceType()
-    {
-        throw new Error("Unimplemented");
-    }
-
     public IUTCTime getPayloadTimeUTC()
     {
         throw new Error("Unimplemented");

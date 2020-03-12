@@ -29,16 +29,6 @@ public class DummyPayload
     }
 
     /**
-     * returns the Payload interface type as defined in the PayloadInterfaceRegistry.
-     *
-     * @return int ... one of the defined types in icecube.daq.payload.PayloadInterfaceRegistry
-     */
-    @Override
-    public int getPayloadInterfaceType() {
-        return -1;
-    }
-
-    /**
      * gets the UTC time tag of a payload
      */
     @Override
