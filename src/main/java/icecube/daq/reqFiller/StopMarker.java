@@ -2,15 +2,17 @@ package icecube.daq.reqFiller;
 
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IDOMID;
+import icecube.daq.payload.IEventHitRecord;
+import icecube.daq.payload.IHitData;
 import icecube.daq.payload.IHitDataPayload;
 import icecube.daq.payload.IHitDataRecord;
 import icecube.daq.payload.IHitPayload;
-import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IReadoutDataPayload;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
+import icecube.daq.payload.PayloadException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -21,8 +23,8 @@ import java.util.List;
  * to indicate that a STOP has been received.
  */
 final class StopMarker
-    implements IHitDataPayload, IHitPayload, ILoadablePayload,
-               IReadoutDataPayload, IReadoutRequest, ITriggerRequestPayload
+    implements IHitDataPayload, IHitPayload, IReadoutDataPayload,
+               IReadoutRequest, ITriggerRequestPayload
 {
     /** Faked payload type. */
     public static final int PAYLOAD_TYPE = 99;
@@ -53,17 +55,6 @@ final class StopMarker
      */
     @Override
     public Object deepCopy()
-    {
-        throw new Error("StopMarker");
-    }
-
-    /**
-     * Should not be used; throws an Error.
-     *
-     * @return Error
-     */
-    @Override
-    public void dispose()
     {
         throw new Error("StopMarker");
     }
@@ -112,6 +103,21 @@ final class StopMarker
     }
 
     /**
+     * Get the hit record representation of this hit.
+     *
+     * @param chanId the channel ID for this hit's DOM ID
+     *
+     * @return hit record
+     *
+     * @throws PayloadException if there is a problem
+     */
+    public IEventHitRecord getEventHitRecord(short chanId)
+        throws PayloadException
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
      * Should not be used; throws an Error.
      *
      * @return Error
@@ -128,7 +134,7 @@ final class StopMarker
      * @return Error
      */
     @Override
-    public List getHitList()
+    public List<IHitData> getHitList()
     {
         throw new Error("StopMarker");
     }
@@ -271,17 +277,6 @@ final class StopMarker
      * @return Error
      */
     @Override
-    public int getRequestUID()
-    {
-        throw new Error("StopMarker");
-    }
-
-    /**
-     * Should not be used; throws an Error.
-     *
-     * @return Error
-     */
-    @Override
     public ISourceID getSourceID()
     {
         throw new Error("StopMarker");
@@ -399,6 +394,7 @@ final class StopMarker
      *
      * @return Error
      */
+    @Override
     public int putBody(ByteBuffer buf, int offset)
     {
         throw new Error("StopMarker");
@@ -446,9 +442,21 @@ final class StopMarker
     }
 
     /**
-     * Object knows how to recycle itself
+     * Object cannot write to a ByteBuffer
      */
-    public int writePayload(boolean writeLoaded, int destOffset, ByteBuffer buf)
+    @Override
+    public int writePayload(ByteBuffer buf, int offset)
+        throws PayloadException
+    {
+        throw new Error("StopMarker");
+    }
+
+    /**
+     * Object cannot write to a ByteBuffer
+     */
+    @Override
+    public int writePayload(boolean writeLoaded, int destOffset,
+                            ByteBuffer buf)
         throws IOException
     {
         throw new Error("StopMarker");

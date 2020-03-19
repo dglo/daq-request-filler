@@ -1,7 +1,6 @@
 package icecube.daq.reqFiller;
 
 import icecube.daq.io.StreamMetaData;
-import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IPayload;
 
 import java.io.IOException;
@@ -17,8 +16,7 @@ import org.apache.log4j.Logger;
  */
 public abstract class RequestFiller
 {
-    public static final ILoadablePayload DROPPED_PAYLOAD =
-        new DummyPayload();
+    public static final IPayload DROPPED_PAYLOAD = new DummyPayload();
 
     /** Stop marker for request and data queues. */
     private static final StopMarker STOP_MARKER = StopMarker.INSTANCE;
@@ -219,7 +217,7 @@ public abstract class RequestFiller
      *
      * @param data payload
      */
-    public abstract void disposeData(ILoadablePayload data);
+    public abstract void disposeData(IPayload data);
 
     /**
      * Dispose of a list of data payloads which are no longer needed.
@@ -409,8 +407,8 @@ public abstract class RequestFiller
      *
      * @return The payload created for the current request.
      */
-    public abstract ILoadablePayload makeDataPayload(IPayload reqPayload,
-                                                     List dataList);
+    public abstract IPayload makeDataPayload(IPayload reqPayload,
+                                             List dataList);
 
     /**
      * Reset the request filler after it has been stopped.
@@ -469,7 +467,7 @@ public abstract class RequestFiller
      *
      * @return <tt>false</tt> if payload could not be sent
      */
-    public abstract boolean sendOutput(ILoadablePayload payload);
+    public abstract boolean sendOutput(IPayload payload);
 
     /**
      * Set the maximum number of failed outputs permitted before the thread
@@ -567,8 +565,7 @@ public abstract class RequestFiller
 
                 boolean sawStop = false;
                 for (int i = 0; i < numLeft; i++) {
-                    ILoadablePayload data =
-                        (ILoadablePayload) requestQueue.get(i);
+                    IPayload data = (IPayload) requestQueue.get(i);
                     if (data == STOP_MARKER) {
                         if (sawStop) {
                             LOG.error("Saw multiple request stops in " +
@@ -602,12 +599,12 @@ public abstract class RequestFiller
          * @throws IOException if we repeatedly hit the mysterious null pointer
          *         exception
          */
-        private ILoadablePayload getData()
+        private IPayload getData()
             throws IOException
         {
-            ILoadablePayload data;
+            IPayload data;
             try {
-                data = (ILoadablePayload) syncRemove(dataQueue, true);
+                data = (IPayload) syncRemove(dataQueue, true);
                 nullPtrCount = 0;
             } catch (NullPointerException npe) {
                 if (nullPtrCount++ < MAX_NULL_POINTER_EXCEPTIONS) {
@@ -657,10 +654,9 @@ public abstract class RequestFiller
          *
          * @return request or <tt>null</tt>
          */
-        ILoadablePayload getRequest()
+        IPayload getRequest()
         {
-            ILoadablePayload req =
-                (ILoadablePayload) syncRemove(requestQueue, false);
+            IPayload req = (IPayload) syncRemove(requestQueue, false);
 
             if (req == STOP_MARKER) {
                 if (LOG.isDebugEnabled()) {
@@ -699,8 +695,8 @@ public abstract class RequestFiller
         @Override
         public void run()
         {
-            ILoadablePayload curData = null;
-            ILoadablePayload curReq = null;
+            IPayload curData = null;
+            IPayload curReq = null;
 
             while (!reqStopped || !dataStopped || curData != null) {
                 // get next request
@@ -789,7 +785,7 @@ public abstract class RequestFiller
                                 // data is past current request, build output!
 
                                 // build the output payload
-                                ILoadablePayload payload =
+                                IPayload payload =
                                     makeDataPayload(curReq, requestedData);
 
                                 if (payload == null) {

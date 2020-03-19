@@ -1,13 +1,14 @@
 package icecube.daq.reqFiller;
 
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IUTCTime;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class DummyPayload
-    implements ILoadablePayload
+    implements IPayload
 {
     public DummyPayload() {
     }
@@ -15,7 +16,7 @@ public class DummyPayload
     /**
      * This method allows a deepCopy of itself.
      *
-     * @return Object which is a copy of the object which implements this interface.
+     * @return a copy of the object which implements this interface.
      */
     @Override
     public Object deepCopy() {
@@ -75,6 +76,14 @@ public class DummyPayload
     public void setCache(IByteBufferCache cache)
     {
         // do nothing
+    }
+
+    @Override
+    public int writePayload(boolean writeLoaded, int destOffset,
+                            ByteBuffer buf)
+        throws IOException
+    {
+        throw new Error("Unimplemented");
     }
 
     @Override
