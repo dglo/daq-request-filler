@@ -156,17 +156,6 @@ final class StopMarker
      * @return Error
      */
     @Override
-    public IUTCTime getHitTimeUTC()
-    {
-        throw new Error("StopMarker");
-    }
-
-    /**
-     * Should not be used; throws an Error.
-     *
-     * @return Error
-     */
-    @Override
     public double getIntegratedCharge()
     {
         throw new Error("StopMarker");
